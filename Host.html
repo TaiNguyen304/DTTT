@@ -289,7 +289,7 @@
     <div class="container">
         <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
         <input type="hidden" id="supabaseKey"
-            value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTU2Mjc4NTYsImV4cCI6MTk3MDcwMzQ1Nn0.ey3hG6ciO1UZIIN1I1N1R5C1KiYCYC29_eYPC3H9i0IZdXE">
+            value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
         <div class="card card-header">
             <h1><i class="fa-solid fa-gamepad" style="color: purple;"></i> Host Control Panel</h1>
             <div style="margin-top: 16px;">
@@ -394,9 +394,10 @@
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value;
 
-        if (supabaseKey.includes("DÁN")) {
-            console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
-        }
+        // Đã xóa check key placeholder, vì key mới đã được dán
+        // if (supabaseKey.includes("DÁN")) {
+        //     console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
+        // }
 
         const supabase = createClient(supabaseUrl, supabaseKey);
         // END KHỞI TẠO SUPABASE

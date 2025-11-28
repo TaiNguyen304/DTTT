@@ -204,7 +204,7 @@
             border: 1px solid #374151;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 25px -5p x rgba(0, 0, 0, 0.5);
         }
 
         video {
@@ -302,7 +302,7 @@
 <body>
     <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
     <input type="hidden" id="supabaseKey"
-        value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTU2Mjc4NTYsImV4cCI6MTk3MDcwMzQ1Nn0.ey3hG6ciO1UZIIN1I1N1R5C1KiYCYC29_eYPC3H9i0IZdXE">
+        value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
 
     <div id="loginSection" class="login-card">
         <div class="login-header">
@@ -401,9 +401,10 @@
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value; 
 
-        if (!supabaseKey || supabaseKey.includes("DÁN")) {
-            console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
-        }
+        // Đã xóa check key placeholder, vì key mới đã được dán
+        // if (!supabaseKey || supabaseKey.includes("DÁN")) {
+        //     console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
+        // }
 
         const supabase = createClient(supabaseUrl, supabaseKey);
         // END KHỞI TẠO SUPABASE
