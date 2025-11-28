@@ -142,11 +142,6 @@
             color: white;
         }
 
-        .btn-dark {
-            background-color: black;
-            color: white;
-        }
-
         /* CSS cho nút Tỉ lệ (mới) - Màu vàng */
         .btn-yellow {
             background-color: yellow;
@@ -176,7 +171,7 @@
         }
 
         .btn-playing {
-            background-color: purple;
+            background-color: green;
             color: white;
         }
 
@@ -193,10 +188,9 @@
         }
 
         .btn-video-selected {
-            background-color: green;
+            background-color: purple;
             color: white;
             font-weight: bold;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
         }
 
         #mainSection {
@@ -277,7 +271,7 @@
         }
 
         .btn-overlay {
-            background: rgba(0, 0, 0, 0.6);
+            background: red;
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 6px 12px;
@@ -290,7 +284,7 @@
         }
 
         .btn-overlay:hover {
-            background: rgba(0, 0, 0, 0.8);
+            background: orange;
         }
 
         .aspect-16-9 {
@@ -303,6 +297,10 @@
 
         .aspect-4-3 {
             aspect-ratio: 4/3;
+        }
+
+        .aspect-3-4 {
+            aspect-ratio: 3/4;
         }
 
         .popup-overlay {
@@ -442,7 +440,7 @@
         <div class="popup-card">
             <i class="fa-solid fa-circle-exclamation" style="font-size: 40px; color: red; margin-bottom: 16px;"></i>
             <p id="msgContent" style="font-weight: bold; margin-bottom: 24px;"></p>
-            <button onclick="closePopup('msgPopup')" class="btn btn-dark">Đóng</button>
+            <button onclick="closePopup('msgPopup')" class="btn btn-red">Đóng</button>
         </div>
     </div>
 
@@ -583,7 +581,7 @@
             for (let r of radios) { if (r.checked) selected = r.value; }
 
             const wrapper = document.getElementById('videoWrapper');
-            wrapper.classList.remove('aspect-4-3', 'aspect-9-16', 'aspect-16-9');
+            wrapper.classList.remove('aspect-3-4', 'aspect-4-3', 'aspect-9-16', 'aspect-16-9');
             wrapper.classList.add(`aspect-${selected}`);
             closePopup('ratioPopup');
         };
