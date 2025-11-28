@@ -10,7 +10,6 @@
 
     <style>
         /* CSS VẪN GIỮ NGUYÊN */
-        /* --- RESET & BASE --- */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -20,13 +19,11 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: white;
-            /* Slate 100 */
             color: black;
             padding: 20px;
             min-height: 100vh;
         }
 
-        /* --- LAYOUT UTILS --- */
         .container {
             max-width: 1024px;
             margin: 0 auto;
@@ -41,22 +38,12 @@
             gap: 16px;
         }
 
-        /* Responsive: Mobile chuyển thành 1 cột */
         @media (max-width: 768px) {
             .grid-3 {
                 grid-template-columns: 1fr;
             }
-
-            .flex-mobile-col {
-                flex-direction: column;
-            }
-
-            .w-full-mobile {
-                width: 100%;
-            }
         }
 
-        /* --- CARDS --- */
         .card {
             background: white;
             border-radius: 16px;
@@ -66,7 +53,6 @@
 
         .card-header {
             border-top: 4px solid purple;
-            /* Indigo */
             text-align: center;
         }
 
@@ -81,7 +67,6 @@
             padding-bottom: 8px;
         }
 
-        /* --- COMPONENTS --- */
         h1 {
             font-size: 1.875rem;
             color: black;
@@ -113,7 +98,6 @@
             background-color: green;
         }
 
-        /* --- BUTTONS --- */
         button {
             border: none;
             cursor: pointer;
@@ -148,7 +132,6 @@
             filter: brightness(0.95);
         }
 
-        /* Gradients */
         .btn-purple {
             background: purple;
         }
@@ -176,14 +159,11 @@
             background: red;
         }
 
-        /* Active Play State */
         .btn-playing {
             background: green;
             box-shadow: 0 0 0 4px #bbf7d0;
-            /* Ring effect */
         }
 
-        /* --- FORM INPUTS --- */
         .input-group {
             margin-bottom: 16px;
             text-align: left;
@@ -210,7 +190,6 @@
             border-color: #f97316;
         }
 
-        /* --- POPUP --- */
         .popup-overlay {
             position: fixed;
             top: 0;
@@ -275,7 +254,6 @@
             font-weight: bold;
         }
 
-        /* Participants List */
         .list-item {
             display: flex;
             justify-content: space-between;
@@ -411,22 +389,20 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
 
-        // KHỞI TẠO SUPABASE THEO YÊU CẦU
+        // KHỞI TẠO SUPABASE
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value; 
 
-        // KIỂM TRA CẤU HÌNH 
-        if (supabaseKey.includes("DÁN") || supabaseUrl.includes("lohkwsuebmgscgmwvyqv") === false) {
-            showMessage("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn trong HTML!");
-            throw new Error("Missing Supabase configuration");
+        if (supabaseKey.includes("DÁN")) {
+            console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
         }
 
         const supabase = createClient(supabaseUrl, supabaseKey);
         // END KHỞI TẠO SUPABASE
         
-        let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) }; // Tạo ID giả cho Host
+        let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) }; // ID giả cho Host
         let currentRoomId = null;
-        let roomSubscription = null; // Để lưu trữ subscription Realtime
+        let roomSubscription = null;
 
         window.createRoom = async () => {
             const roomId = Math.floor(1000000 + Math.random() * 9000000).toString();
@@ -534,14 +510,12 @@
 
         window.playRound = async (roundNum) => {
             if (!currentRoomId) return showMessage("Chưa vào phòng");
-            resetPlayButtons();
-
-            const status = { round: roundNum, isPlaying: true, timestamp: Date.now() };
 
             // Lấy dữ liệu hiện tại để cập nhật trường 'status'
             const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
             if (fetchError || !room) return showMessage("Lỗi: Không tìm thấy phòng.");
 
+            const status = { round: roundNum, isPlaying: true, timestamp: Date.now() };
             const updatedData = { ...room.data, status: status };
 
             const { error: updateError } = await supabase.from('rooms')
@@ -552,10 +526,8 @@
         };
 
         function listenToRoom(roomId) {
-            // Hủy sub cũ nếu có
             if (roomSubscription) supabase.removeChannel(roomSubscription);
 
-            // 1. Lấy dữ liệu ban đầu
             (async () => {
                 const { data, error } = await supabase.from('rooms').select('data').eq('id', roomId).single();
                 if (data) {
@@ -567,7 +539,6 @@
                 }
             })();
 
-            // 2. Thiết lập Realtime Subscription
             roomSubscription = supabase.channel(`room_${roomId}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                     const roomData = payload.new.data;
