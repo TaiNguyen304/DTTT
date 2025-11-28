@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contestant Interface</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* CSS VẪN GIỮ NGUYÊN */
+        /* --- RESET & BASE --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: white;
+            /* Dark Gray */
+            color: black;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        /* --- LOGIN SECTION --- */
+        .login-card {
+            background: white;
+            color: #1f2937;
+            width: 100%;
+            max-width: 450px;
+            /* Giới hạn chiều rộng */
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+        }
+
+        .login-header {
+            margin-bottom: 24px;
+        }
+
+        .login-icon {
+            width: 64px;
+            height: 64px;
+            background: #e0e7ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #111827;
+        }
+
+        .login-subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        /* INPUT STYLES - Đảm bảo nằm trong khung */
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .input-icon {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 1.1rem;
+            pointer-events: none;
+            /* Icon không cản click vào input */
+        }
+
+        .form-control {
+            width: 100%;
+            /* Chiếm 100% width của cha (login-card padding) */
+            padding: 14px 16px 14px 44px;
+            /* Padding-left lớn để né icon */
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #111827;
+            outline: none;
+            transition: all 0.2s;
+            background: #fff;
+        }
+
+        .form-control:focus {
+            border-color: purple;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
+        .form-control::placeholder {
+            color: #9ca3af;
+            font-weight: bold;
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-weight: bold;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.2s, filter 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            background-color: orange;
+            color: white;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: purple;
+            color: white;
+        }
+
+        .btn-red {
+            background-color: red;
+            color: white;
+        }
+
+        .btn-dark {
+            background-color: black;
+            color: white;
+        }
+
+        .btn-active-round {
+            background-color: #ff00cc;
+            /* Pink */
+            color: white;
+            box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.4);
+        }
+
+        .btn-playing {
+            background-color: green;
+            /* Green */
+            color: white;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+        }
+
+        /* --- MAIN INTERFACE --- */
+        #mainSection {
+            width: 100%;
+            max-width: 1024px;
+            display: none;
+            /* JS will change to flex */
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-bar {
+            width: 100%;
+            background: #1f2937;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #374151;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        .room-tag {
+            color: blue;
+            font-family: monospace;
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .video-controls-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 24px;
+        }
+
+        /* --- VIDEO PLAYER --- */
+        .video-wrapper {
+            width: 100%;
+            background: black;
+            border-radius: 12px;
+            border: 1px solid #374151;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Floating controls inside video */
+        .overlay-controls {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        .video-wrapper:hover .overlay-controls {
+            opacity: 1;
+        }
+
+        .btn-overlay {
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+
+        .btn-overlay:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Aspect Ratios */
+        .aspect-16-9 {
+            aspect-ratio: 16/9;
+        }
+
+        .aspect-9-16 {
+            aspect-ratio: 9/16;
+        }
+
+        .aspect-4-3 {
+            aspect-ratio: 4/3;
+        }
+
+        /* --- POPUP --- */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99;
+        }
+
+        .popup-card {
+            background: white;
+            color: #1f2937;
+            padding: 24px;
+            border-radius: 16px;
+            width: 320px;
+            text-align: center;
+        }
+
+        .radio-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .radio-option:hover {
+            background: #f3f4f6;
+        }
+
+        .popup-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
+    <input type="hidden" id="supabaseKey" value="DÁN_SUPABASE_KEY_CỦA_BẠN_VÀO_ĐÂY">
+    <div id="loginSection" class="login-card">
+        <div class="login-header">
+            <div class="login-icon">
+                <i class="fa-solid fa-user-astronaut" style="font-size: 32px; color: purple; font-weight: bold;"></i>
+            </div>
+            <h1 class="login-title">Đăng nhập Thí sinh</h1>
+            <p class="login-subtitle">Nhập thông tin phòng thi để bắt đầu</p>
+        </div>
+
+        <div class="input-wrapper">
+            <i class="fa-solid fa-hashtag input-icon"></i>
+            <input type="text" id="loginRoom" placeholder="Mã phòng" class="form-control">
+        </div>
+
+        <div class="input-wrapper">
+            <i class="fa-regular fa-user input-icon"></i>
+            <input type="text" id="loginUser" placeholder="Tên hiển thị" class="form-control">
+        </div>
+
+        <button onclick="joinRoom()" class="btn btn-primary" style="margin-top: 8px;">
+            Xác nhận tham gia <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <div id="mainSection">
+
+        <div class="info-bar">
+            <div style="display: flex; align-items: center;">
+                <div
+                    style="width: 10px; height: 10px; background: green; border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px #22c55e;">
+                </div>
+                <span style="color: #9ca3af; font-weight: bold; font-size: 0.9rem;">PHÒNG:</span>
+                <span id="displayRoomId" class="room-tag">---</span>
+            </div>
+            <div>
+                <i class="fa-solid fa-user" style="color: #818cf8; margin-right: 6px;"></i>
+                <span id="displayUser" style="font-weight: bold;">---</span>
+            </div>
+        </div>
+
+        <div class="video-controls-row">
+            <button id="btnVid1" onclick="selectVideo(1)" class="btn btn-red">Vòng 1</button>
+            <button id="btnVid2" onclick="selectVideo(2)" class="btn btn-red">Vòng 2</button>
+            <button id="btnVid3" onclick="selectVideo(3)" class="btn btn-red">Vòng 3</button>
+        </div>
+
+        <div id="videoWrapper" class="video-wrapper aspect-16-9">
+            <video id="mainVideo" playsinline></video>
+
+            <div class="overlay-controls">
+                <button onclick="openPopup('ratioPopup')" class="btn-overlay">
+                    <i class="fa-solid fa-expand"></i> Tỉ lệ
+                </button>
+                <button onclick="toggleMute()" id="btnMute" class="btn-overlay">
+                    <i class="fa-solid fa-volume-high"></i> Tắt/Bật
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ratioPopup" class="popup-overlay">
+        <div class="popup-card">
+            <h3 style="font-size: 1.2rem; font-weight: bold; margin-bottom: 16px;">Chọn tỉ lệ khung hình</h3>
+
+            <label class="radio-option">
+                <b>16:9</b> <input type="radio" name="ratio" value="16-9" checked>
+            </label>
+            <label class="radio-option">
+                <b>9:16</b> <input type="radio" name="ratio" value="9-16">
+            </label>
+            <label class="radio-option">
+                <b>4:3</b> <input type="radio" name="ratio" value="4-3">
+            </label>
+
+            <div class="popup-actions">
+                <button onclick="saveRatio()" class="btn btn-primary">Áp dụng</button>
+                <button onclick="closePopup('ratioPopup')" class="btn btn-dark">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="msgPopup" class="popup-overlay">
+        <div class="popup-card">
+            <i class="fa-solid fa-circle-exclamation" style="font-size: 40px; color: red; margin-bottom: 16px;"></i>
+            <p id="msgContent" style="font-weight: bold; margin-bottom: 24px;"></p>
+            <button onclick="closePopup('msgPopup')" class="btn btn-dark">Đóng</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
+
+        // KHỞI TẠO SUPABASE THEO YÊU CẦU
+        const supabaseUrl = document.getElementById('supabaseUrl').value;
+        const supabaseKey = document.getElementById('supabaseKey').value;
+        
+        // KIỂM TRA CẤU HÌNH 
+        if (supabaseKey.includes("DÁN") || supabaseUrl.includes("lohkwsuebmgscgmwvyqv") === false) {
+            showMessage("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn trong HTML!");
+            throw new Error("Missing Supabase configuration");
+        }
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        // END KHỞI TẠO SUPABASE
+        
+        let currentUser = { uid: "contestant-" + Math.random().toString(36).substring(2, 9) };
+        let currentRoomId = null;
+        let roomData = { round1Video: "", round2Videos: [], round3Video: "" };
+        let currentSelectedRound = 1;
+        let roomSubscription = null;
+
+        window.joinRoom = async () => {
+            const roomId = document.getElementById('loginRoom').value;
+            const username = document.getElementById('loginUser').value;
+
+            if (!roomId || roomId.length !== 7) return showMessage("Mã phòng phải có 7 số");
+            if (!username) return showMessage("Vui lòng nhập tên");
+
+            try {
+                // 1. Lấy dữ liệu phòng hiện tại
+                const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', roomId).single();
+                if (fetchError || !room) return showMessage("Phòng không tồn tại");
+
+                const currentData = room.data;
+                if (currentData.participants.some(p => p.name === username)) return showMessage("Tên đã có người dùng");
+
+                // 2. Cập nhật danh sách tham gia
+                const newParticipant = { name: username, role: "Thí sinh", id: currentUser.uid };
+                currentData.participants.push(newParticipant);
+
+                const { error: updateError } = await supabase.from('rooms')
+                    .update({ data: currentData })
+                    .eq('id', roomId);
+
+                if (updateError) throw updateError;
+
+                currentRoomId = roomId;
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'flex';
+                document.getElementById('displayRoomId').innerText = roomId;
+                document.getElementById('displayUser').innerText = username;
+
+                listenToRoom(roomId, currentData); // Truyền data ban đầu vào
+            } catch (e) { showMessage("Lỗi tham gia phòng: " + e.message); }
+        };
+
+        window.selectVideo = (roundNum) => {
+            currentSelectedRound = roundNum;
+            updateButtonStyles();
+            loadVideoSource(roundNum);
+        };
+
+        window.toggleMute = () => {
+            const vid = document.getElementById('mainVideo');
+            vid.muted = !vid.muted;
+            const btn = document.getElementById('btnMute');
+            btn.innerHTML = vid.muted ? '<i class="fa-solid fa-volume-xmark"></i> Bật tiếng' : '<i class="fa-solid fa-volume-high"></i> Tắt tiếng';
+        };
+
+        window.saveRatio = () => {
+            const radios = document.getElementsByName('ratio');
+            let selected = "16-9";
+            for (let r of radios) { if (r.checked) selected = r.value; }
+
+            const wrapper = document.getElementById('videoWrapper');
+            wrapper.classList.remove('aspect-4-3', 'aspect-9-16', 'aspect-16-9');
+            wrapper.classList.add(`aspect-${selected}`);
+            closePopup('ratioPopup');
+        };
+
+        function listenToRoom(roomId, initialData) {
+            if (roomSubscription) supabase.removeChannel(roomSubscription);
+
+            // Xử lý dữ liệu ban đầu
+            if (initialData) {
+                updateRoomDataAndStatus(initialData);
+            }
+
+            // Thiết lập Realtime Subscription
+            roomSubscription = supabase.channel(`room_${roomId}`)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
+                    updateRoomDataAndStatus(payload.new.data);
+                })
+                .subscribe();
+        }
+
+        function updateRoomDataAndStatus(data) {
+            roomData.round1Video = data.round1Video;
+            roomData.round2Videos = data.round2Videos || [];
+            roomData.round3Video = data.round3Video;
+
+            const status = data.status;
+            if (status) {
+                if (status.isPlaying) {
+                    // Nếu Host chuyển vòng hoặc video đang dừng, tự động chuyển/phát
+                    if (currentSelectedRound !== status.round || document.getElementById('mainVideo').paused) {
+                        currentSelectedRound = status.round;
+                        updateButtonStyles();
+                        loadVideoSource(status.round, true);
+                    }
+                    const activeBtn = document.getElementById(`btnVid${status.round}`);
+                    if (activeBtn) {
+                        activeBtn.className = "btn btn-playing"; // Playing state
+                    }
+                } else {
+                    updateButtonStyles(); // Reset về trạng thái Active Round nếu không phát
+                }
+            }
+        }
+
+
+        function loadVideoSource(roundNum, autoPlay = false) {
+            const vid = document.getElementById('mainVideo');
+            let src = "";
+            if (roundNum === 1) src = roomData.round1Video;
+            else if (roundNum === 2 && roomData.round2Videos.length > 0) src = roomData.round2Videos[0].url;
+            else if (roundNum === 3) src = roomData.round3Video;
+
+            const currentSrc = vid.getAttribute('src');
+            if (currentSrc !== src) vid.src = src;
+
+            // Xóa url nếu không có video (tránh lỗi)
+            if (!src) vid.src = "";
+
+            if (autoPlay && src) vid.play().catch(e => console.log("Autoplay blocked", e));
+        }
+
+        function updateButtonStyles() {
+            [1, 2, 3].forEach(i => {
+                const btn = document.getElementById(`btnVid${i}`);
+                btn.className = "btn btn-red";
+            });
+            const selectedBtn = document.getElementById(`btnVid${currentSelectedRound}`);
+            if (selectedBtn) {
+                selectedBtn.className = "btn btn-active-round";
+            }
+        }
+
+        // Cập nhật trạng thái nút khi video kết thúc/bắt đầu
+        document.getElementById('mainVideo').onended = () => updateButtonStyles();
+        document.getElementById('mainVideo').onplay = () => {
+            const btn = document.getElementById(`btnVid${currentSelectedRound}`);
+            if (btn) btn.className = "btn btn-playing";
+        };
+
+        window.openPopup = (id) => document.getElementById(id).style.display = 'flex';
+        window.closePopup = (id) => document.getElementById(id).style.display = 'none';
+        window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); }
+    </script>
+</body>
+
+</html>
