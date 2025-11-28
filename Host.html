@@ -405,9 +405,9 @@
         let heartbeatInterval = null;
         let cleanupInterval = null;
 
-        // --- CÁC HÀM HEARTBEAT VÀ CLEANUP (ĐÃ TỐI ƯU) ---
+        // --- CÁC HÀM HEARTBEAT VÀ CLEANUP (ĐÃ TỐI ƯU HÓA CỰC ĐỘ) ---
 
-        // Chức năng 1: Gửi nhịp tim của bản thân Host/Manager (3 giây)
+        // Chức năng 1: Gửi nhịp tim của bản thân Host/Manager (1 giây)
         function startHeartbeat(roomId, uid) {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
@@ -421,6 +421,7 @@
                     const newParticipants = room.data.participants.map(p => {
                         if (p.id === uid) {
                             updated = true;
+                            // Cập nhật timestamp
                             return { ...p, last_active: Date.now() };
                         }
                         return p;
@@ -437,8 +438,8 @@
             };
 
             updateActiveStatus();
-            // Cập nhật: Tần suất Heartbeat là 3 giây
-            heartbeatInterval = setInterval(updateActiveStatus, 3000);
+            // Cập nhật: Tần suất Heartbeat là 1 giây
+            heartbeatInterval = setInterval(updateActiveStatus, 1000);
         }
 
         // Chức năng 2: Dọn dẹp người dùng không hoạt động (Chỉ Host mới chạy)
@@ -448,8 +449,8 @@
             const cleanupInactiveUsers = async () => {
                 if (!roomId) return;
                 const now = Date.now();
-                // Cập nhật: Ngưỡng không hoạt động chỉ còn 10 giây (10000ms)
-                const threshold = 10000;
+                // Ngưỡng không hoạt động: 6 giây (6000ms)
+                const threshold = 6000;
 
                 try {
                     const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
@@ -468,16 +469,14 @@
                         await supabase.from('rooms').update({
                             data: { ...room.data, participants: activeParticipants }
                         }).eq('id', roomId);
-                    } else {
-                        console.log(`[CLEANUP RUNNING] No inactive users found. Total: ${currentParticipants.length}`);
                     }
                 } catch (e) {
                     console.error("Cleanup error:", e.message);
                 }
             };
 
-            // Cập nhật: Chạy dọn dẹp mỗi 5 giây (5000ms)
-            cleanupInterval = setInterval(cleanupInactiveUsers, 5000);
+            // Cập nhật: Chạy dọn dẹp mỗi 1 giây
+            cleanupInterval = setInterval(cleanupInactiveUsers, 1000);
         }
 
         // --- HÀM XỬ LÝ RỜI PHÒNG THÔNG THƯỜNG ---
@@ -505,6 +504,7 @@
 
             const initialData = {
                 hostId: currentUser.uid,
+                // THÊM last_active khi tạo phòng
                 participants: [{ name: "Host", role: "Host", id: currentUser.uid, last_active: Date.now() }],
                 round1Video: "", round2Videos: [], round3Video: "",
                 status: { round: 0, isPlaying: false, timestamp: Date.now() }
@@ -517,6 +517,7 @@
                 updateUIJoined(roomId, "Host");
                 showMessage(`Đã tạo phòng thành công!\nMã: ${roomId}`);
 
+                // BẮT ĐẦU HEARTBEAT VÀ CLEANUP
                 startHeartbeat(currentRoomId, currentUser.uid);
                 startCleanup(currentRoomId);
 
@@ -538,7 +539,7 @@
                 if (currentData.participants.some(p => p.name === username && (p.role === "Quản lý" || p.role === "Host"))) return showMessage("Tên Quản lý/Host đã tồn tại");
 
                 currentUser.uid = "manager-" + Math.random().toString(36).substring(2, 9);
-
+                // THÊM last_active khi tham gia
                 const newParticipant = { name: username, role: "Quản lý", id: currentUser.uid, last_active: Date.now() };
                 if (!currentData.participants) currentData.participants = [];
                 currentData.participants.push(newParticipant);
@@ -553,6 +554,7 @@
                 updateUIJoined(roomId, "Quản lý");
                 showMessage("Đăng nhập quản lý thành công!");
 
+                // BẮT ĐẦU HEARTBEAT
                 startHeartbeat(currentRoomId, currentUser.uid);
 
                 listenToRoom(roomId);

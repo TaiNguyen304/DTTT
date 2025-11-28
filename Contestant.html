@@ -449,17 +449,18 @@
 
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value;
+
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        let currentUser = { uid: "contestant-" + Math.random().toString(36).substring(2, 9) };
+        let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) };
         let currentRoomId = null;
-        let roomData = { round1Video: "", round2Videos: [], round3Video: "" };
-        let currentSelectedRound = 1;
-        let currentSelectedVideoIndex = 0;
         let roomSubscription = null;
         let heartbeatInterval = null;
+        let cleanupInterval = null;
 
-        // --- HÀM HEARTBEAT (ĐÃ TỐI ƯU) ---
+        // --- CÁC HÀM HEARTBEAT VÀ CLEANUP (ĐÃ TỐI ƯU HÓA CỰC ĐỘ) ---
+
+        // Chức năng 1: Gửi nhịp tim của bản thân Host/Manager (1 giây)
         function startHeartbeat(roomId, uid) {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
@@ -473,6 +474,7 @@
                     const newParticipants = room.data.participants.map(p => {
                         if (p.id === uid) {
                             updated = true;
+                            // Cập nhật timestamp
                             return { ...p, last_active: Date.now() };
                         }
                         return p;
@@ -484,18 +486,56 @@
                         }).eq('id', roomId);
                     }
                 } catch (e) {
-                    console.error("Contestant Heartbeat error:", e.message);
+                    console.error("Host Heartbeat error:", e.message);
                 }
             };
 
             updateActiveStatus();
-            // Cập nhật: Tần suất Heartbeat là 3 giây
-            heartbeatInterval = setInterval(updateActiveStatus, 3000);
+            // Cập nhật: Tần suất Heartbeat là 1 giây
+            heartbeatInterval = setInterval(updateActiveStatus, 1000);
+        }
+
+        // Chức năng 2: Dọn dẹp người dùng không hoạt động (Chỉ Host mới chạy)
+        function startCleanup(roomId) {
+            if (cleanupInterval) clearInterval(cleanupInterval);
+
+            const cleanupInactiveUsers = async () => {
+                if (!roomId) return;
+                const now = Date.now();
+                // Ngưỡng không hoạt động: 6 giây (6000ms)
+                const threshold = 6000;
+
+                try {
+                    const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
+                    if (!room || !room.data) return;
+
+                    const currentParticipants = room.data.participants || [];
+
+                    const activeParticipants = currentParticipants.filter(p =>
+                        p.role === "Host" ||
+                        (p.last_active && (now - p.last_active < threshold))
+                    );
+
+                    if (activeParticipants.length < currentParticipants.length) {
+                        console.log(`[CLEANUP SUCCESS] Removing ${currentParticipants.length - activeParticipants.length} inactive user(s).`);
+
+                        await supabase.from('rooms').update({
+                            data: { ...room.data, participants: activeParticipants }
+                        }).eq('id', roomId);
+                    }
+                } catch (e) {
+                    console.error("Cleanup error:", e.message);
+                }
+            };
+
+            // Cập nhật: Chạy dọn dẹp mỗi 1 giây
+            cleanupInterval = setInterval(cleanupInactiveUsers, 1000);
         }
 
         // --- HÀM XỬ LÝ RỜI PHÒNG THÔNG THƯỜNG ---
         const handleLeaveRoom = async () => {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
+            if (cleanupInterval) clearInterval(cleanupInterval);
             if (!currentRoomId) return;
 
             const { data: room, error } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
@@ -509,13 +549,39 @@
 
         window.addEventListener('beforeunload', handleLeaveRoom);
         window.addEventListener('pagehide', handleLeaveRoom);
-        // ---------------------------
+        // ----------------------------------------------------
 
-        window.joinRoom = async () => {
-            const roomId = document.getElementById('loginRoom').value;
-            const username = document.getElementById('loginUser').value;
+        window.createRoom = async () => {
+            const roomId = Math.floor(1000000 + Math.random() * 9000000).toString();
+            currentUser.uid = "host-" + Math.random().toString(36).substring(2, 9);
 
-            if (!roomId || roomId.length !== 7) return showMessage("Mã phòng phải có 7 số");
+            const initialData = {
+                hostId: currentUser.uid,
+                // THÊM last_active khi tạo phòng
+                participants: [{ name: "Host", role: "Host", id: currentUser.uid, last_active: Date.now() }],
+                round1Video: "", round2Videos: [], round3Video: "",
+                status: { round: 0, isPlaying: false, timestamp: Date.now() }
+            };
+
+            try {
+                const { error } = await supabase.from('rooms').insert([{ id: roomId, data: initialData }]);
+                if (error) throw error;
+                currentRoomId = roomId;
+                updateUIJoined(roomId, "Host");
+                showMessage(`Đã tạo phòng thành công!\nMã: ${roomId}`);
+
+                // BẮT ĐẦU HEARTBEAT VÀ CLEANUP
+                startHeartbeat(currentRoomId, currentUser.uid);
+                startCleanup(currentRoomId);
+
+                listenToRoom(roomId);
+            } catch (e) { showMessage("Lỗi tạo phòng: " + e.message); }
+        };
+
+        window.confirmJoinManager = async () => {
+            const roomId = document.getElementById('joinRoomCode').value;
+            const username = document.getElementById('joinUsername').value;
+            if (!roomId || roomId.length !== 7) return showMessage("Mã phòng không hợp lệ");
             if (!username) return showMessage("Vui lòng nhập tên");
 
             try {
@@ -523,10 +589,11 @@
                 if (fetchError || !room) return showMessage("Phòng không tồn tại");
 
                 const currentData = room.data;
-                if (currentData.participants && currentData.participants.some(p => p.name === username)) return showMessage("Tên đã có người dùng");
+                if (currentData.participants.some(p => p.name === username && (p.role === "Quản lý" || p.role === "Host"))) return showMessage("Tên Quản lý/Host đã tồn tại");
 
-                currentUser.uid = "contestant-" + Math.random().toString(36).substring(2, 9);
-                const newParticipant = { name: username, role: "Thí sinh", id: currentUser.uid, last_active: Date.now() };
+                currentUser.uid = "manager-" + Math.random().toString(36).substring(2, 9);
+                // THÊM last_active khi tham gia
+                const newParticipant = { name: username, role: "Quản lý", id: currentUser.uid, last_active: Date.now() };
                 if (!currentData.participants) currentData.participants = [];
                 currentData.participants.push(newParticipant);
 
@@ -535,64 +602,29 @@
                     .eq('id', roomId);
 
                 if (updateError) throw updateError;
-
                 currentRoomId = roomId;
-                document.getElementById('loginSection').style.display = 'none';
-                document.getElementById('mainSection').style.display = 'flex';
-                document.getElementById('displayRoomId').innerText = roomId;
-                document.getElementById('displayUser').innerText = username;
+                closePopup('joinPopup');
+                updateUIJoined(roomId, "Quản lý");
+                showMessage("Đăng nhập quản lý thành công!");
 
+                // BẮT ĐẦU HEARTBEAT
                 startHeartbeat(currentRoomId, currentUser.uid);
 
                 listenToRoom(roomId);
-            } catch (e) { showMessage("Lỗi tham gia phòng: " + e.message); }
+            } catch (e) { showMessage("Lỗi: " + e.message); }
         };
 
         // --- CÁC HÀM KHÁC (GIỮ NGUYÊN) ---
 
-        window.selectRound = (roundNum) => {
-            currentSelectedRound = roundNum;
-            if (roundNum !== 2) {
-                currentSelectedVideoIndex = 0;
-            }
-            updateButtonStyles();
-            loadVideoSource(roundNum);
-        };
-
-        window.selectVideoIndex = (index) => {
-            if (currentSelectedRound !== 2) {
-                return showMessage("Vui lòng chọn Vòng 2 trước khi chọn Video.");
-            }
-            currentSelectedVideoIndex = index;
-            updateButtonStyles();
-            loadVideoSource(currentSelectedRound);
-        };
-
-        window.toggleMute = () => {
-            const vid = document.getElementById('mainVideo');
-            vid.muted = !vid.muted;
-            const btn = document.getElementById('btnMute');
-            btn.innerHTML = vid.muted ? '<i class="fa-solid fa-volume-xmark"></i> Bật tiếng' : '<i class="fa-solid fa-volume-high"></i> Tắt tiếng';
-        };
-
-        window.saveRatio = () => {
-            const radios = document.getElementsByName('ratio');
-            let selected = "16-9";
-            for (let r of radios) { if (r.checked) selected = r.value; }
-
-            const wrapper = document.getElementById('videoWrapper');
-            wrapper.classList.remove('aspect-3-4', 'aspect-4-3', 'aspect-9-16', 'aspect-16-9');
-            wrapper.classList.add(`aspect-${selected}`);
-            closePopup('ratioPopup');
-        };
-
         function listenToRoom(roomId) {
             if (roomSubscription) supabase.removeChannel(roomSubscription);
+
             (async () => {
                 const { data, error } = await supabase.from('rooms').select('data').eq('id', roomId).single();
                 if (data) {
-                    updateRoomDataAndStatus(data.data);
-                    updateButtonStyles();
+                    const roomData = data.data;
+                    updateParticipantsList(roomData.participants);
+                    updateRoundUI(roomData.status);
                 } else if (error) {
                     showMessage("Lỗi kết nối Realtime: " + error.message);
                 }
@@ -600,83 +632,130 @@
 
             roomSubscription = supabase.channel(`room_${roomId}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
-                    updateRoomDataAndStatus(payload.new.data);
+                    const roomData = payload.new.data;
+                    updateParticipantsList(roomData.participants);
+                    updateRoundUI(roomData.status);
                 })
                 .subscribe();
         }
 
-        function updateRoomDataAndStatus(data) {
-            roomData.round1Video = data.round1Video;
-            roomData.round2Videos = data.round2Videos || [];
-            roomData.round3Video = data.round3Video;
+        window.handleExcelUpload = (input) => {
+            if (!currentRoomId) return showMessage("Vui lòng tạo/vào phòng trước");
+            const file = input.files[0];
+            if (!file) return;
 
-            const status = data.status;
-            if (status) {
-                if (status.isPlaying) {
-                    if (currentSelectedRound !== status.round || document.getElementById('mainVideo').paused) {
-                        currentSelectedRound = status.round;
-                        if (currentSelectedRound === 2) {
-                            currentSelectedVideoIndex = 0;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    let v1Url = "";
+                    if (workbook.Sheets["Vòng 1"]) v1Url = workbook.Sheets["Vòng 1"]['A2']?.v || "";
+
+                    let v2List = [];
+                    if (workbook.Sheets["Vòng 2"]) {
+                        const s2 = workbook.Sheets["Vòng 2"];
+                        for (let i = 2; i <= 4; i++) {
+                            const topic = s2[`A${i}`]?.v || `Video ${i - 1}`;
+                            const url = s2[`B${i}`]?.v || "";
+                            if (url) v2List.push({ topic, url });
                         }
-                        updateButtonStyles();
-                        loadVideoSource(status.round, true);
                     }
-                    const activeBtn = document.getElementById(`btnRound${status.round}`);
-                    if (activeBtn) {
-                        activeBtn.className = "btn btn-playing";
-                    }
-                } else {
-                    updateButtonStyles();
-                }
-            }
-        }
+                    let v3Url = "";
+                    if (workbook.Sheets["Vòng 3"]) v3Url = workbook.Sheets["Vòng 3"]['A2']?.v || "";
 
-        function loadVideoSource(roundNum, autoPlay = false) {
-            const vid = document.getElementById('mainVideo');
-            let src = "";
-            if (roundNum === 1) src = roomData.round1Video;
-            else if (roundNum === 2 && roomData.round2Videos.length > currentSelectedVideoIndex) {
-                src = roomData.round2Videos[currentSelectedVideoIndex].url;
-            }
-            else if (roundNum === 3) src = roomData.round3Video;
+                    const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+                    if (fetchError || !room) throw new Error("Không tìm thấy phòng để cập nhật");
 
-            const currentSrc = vid.getAttribute('src');
-            if (currentSrc !== src) vid.src = src;
-            if (!src) vid.src = "";
-            if (autoPlay && src) vid.play().catch(e => console.log("Autoplay blocked", e));
-        }
+                    const updatedData = {
+                        ...room.data,
+                        round1Video: v1Url,
+                        round2Videos: v2List,
+                        round3Video: v3Url
+                    };
 
-        function updateButtonStyles() {
-            [1, 2, 3].forEach(i => {
-                const btn = document.getElementById(`btnRound${i}`);
-                btn.className = "btn btn-red";
-            });
-            const selectedRoundBtn = document.getElementById(`btnRound${currentSelectedRound}`);
-            if (selectedRoundBtn) selectedRoundBtn.className = "btn btn-active-round";
+                    const { error: updateError } = await supabase.from('rooms')
+                        .update({ data: updatedData })
+                        .eq('id', currentRoomId);
 
-            [0, 1, 2].forEach(i => {
-                const btn = document.getElementById(`btnVidIndex${i}`);
-                if (roomData.round2Videos.length > i) {
-                    btn.innerHTML = roomData.round2Videos[i].topic || `Video ${i + 1}`;
-                } else {
-                    btn.innerHTML = `Video ${i + 1}`;
-                }
-
-                btn.className = "btn btn-video";
-                if (currentSelectedRound === 2 && i === currentSelectedVideoIndex) {
-                    btn.className = "btn btn-video-selected";
-                }
-            });
-        }
-
-        document.getElementById('mainVideo').onended = () => updateButtonStyles();
-        document.getElementById('mainVideo').onplay = () => {
-            const btn = document.getElementById(`btnRound${currentSelectedRound}`);
-            if (btn) btn.className = "btn btn-playing";
+                    if (updateError) throw updateError;
+                    document.getElementById('uploadStatus').innerText = "Đã tải lên!";
+                    setTimeout(() => document.getElementById('uploadStatus').innerText = "", 3000);
+                    showMessage("Nhập dữ liệu thành công!");
+                } catch (err) { showMessage("Lỗi file Excel hoặc cập nhật DB: " + err.message); }
+            };
+            reader.readAsArrayBuffer(file);
         };
+
+        window.playRound = async (roundNum) => {
+            if (!currentRoomId) return showMessage("Chưa vào phòng");
+            const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+            if (fetchError || !room) return showMessage("Lỗi: Không tìm thấy phòng.");
+
+            const status = { round: roundNum, isPlaying: true, timestamp: Date.now() };
+            const updatedData = { ...room.data, status: status };
+
+            const { error: updateError } = await supabase.from('rooms')
+                .update({ data: updatedData })
+                .eq('id', currentRoomId);
+            if (updateError) return showMessage("Lỗi điều khiển vòng chơi: " + updateError.message);
+        };
+
+        function updateRoundUI(status) {
+            if (status) {
+                resetPlayButtons();
+                if (status.isPlaying) {
+                    const btn = document.getElementById(`btnPlay${status.round}`);
+                    if (btn) {
+                        btn.className = "btn btn-playing";
+                        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang phát Vòng ${status.round}`;
+                    }
+                }
+            }
+        }
+
+        function updateParticipantsList(list) {
+            const container = document.getElementById('participantsList');
+            container.innerHTML = "";
+            if (!list || list.length === 0) {
+                container.innerHTML = "<div style='padding:10px; text-align:center'>Chưa có ai tham gia</div>";
+                return;
+            }
+            list.forEach(p => {
+                const div = document.createElement('div');
+                div.className = "list-item";
+                let icon = "fa-user";
+                let color = "#475569";
+                if (p.role === "Host") { icon = "fa-crown"; color = "#7c3aed"; }
+                else if (p.role === "Quản lý") { icon = "fa-user-shield"; color = "#ea580c"; }
+                else if (p.role === "Thí sinh") { icon = "fa-user-astronaut"; color = "#22c55e"; }
+
+                div.innerHTML = `
+                <span style="font-weight: bold; color: ${color};"><i class="fa-solid ${icon}" style="margin-right: 8px;"></i>${p.name}</span>
+                <span class="role-badge">${p.role}</span>
+            `;
+                container.appendChild(div);
+            });
+        }
+
+        function resetPlayButtons() {
+            [1, 2, 3].forEach(i => {
+                const btn = document.getElementById(`btnPlay${i}`);
+                btn.className = "btn btn-pink";
+                btn.innerHTML = `<i class="fa-solid fa-play"></i> Vòng ${i}`;
+            });
+        }
+
+        function updateUIJoined(roomId, role) {
+            const statusEl = document.getElementById('statusInfo');
+            statusEl.style.border = "1px solid #c7d2fe";
+            statusEl.style.color = "#4338ca";
+            statusEl.innerHTML = `<i class="fa-solid fa-wifi" style="color:#22c55e;"></i> Phòng: ${roomId} | ${role}`;
+        }
 
         window.openPopup = (id) => document.getElementById(id).style.display = 'flex';
         window.closePopup = (id) => document.getElementById(id).style.display = 'none';
+        window.openListPopup = () => { if (!currentRoomId) return showMessage("Chưa có phòng"); openPopup('listPopup'); }
         window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); }
     </script>
 </body>
