@@ -184,7 +184,6 @@
             font-size: 1rem;
             outline: none;
             transition: border-color 0.2s;
-            /* Đã thêm font-weight: bold cho tất cả input */
             font-weight: bold;
         }
 
@@ -395,14 +394,12 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
 
-        // KHỞI TẠO SUPABASE
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value;
 
         const supabase = createClient(supabaseUrl, supabaseKey);
-        // END KHỞI TẠO SUPABASE
 
-        let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) }; // ID giả cho Host/Manager
+        let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) };
         let currentRoomId = null;
         let roomSubscription = null;
 
@@ -416,11 +413,8 @@
             };
 
             try {
-                // Thêm phòng vào bảng 'rooms'. Cột: id (roomId), data (initialData)
                 const { error } = await supabase.from('rooms').insert([{ id: roomId, data: initialData }]);
-
                 if (error) throw error;
-
                 currentRoomId = roomId;
                 updateUIJoined(roomId, "Host");
                 showMessage(`Đã tạo phòng thành công!\nMã: ${roomId}`);
@@ -435,14 +429,12 @@
             if (!username) return showMessage("Vui lòng nhập tên");
 
             try {
-                // 1. Lấy dữ liệu phòng hiện tại
                 const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', roomId).single();
                 if (fetchError || !room) return showMessage("Phòng không tồn tại");
 
                 const currentData = room.data;
                 if (currentData.participants.some(p => p.name === username && (p.role === "Quản lý" || p.role === "Host"))) return showMessage("Tên Quản lý/Host đã tồn tại");
 
-                // 2. Cập nhật danh sách tham gia
                 const newParticipant = { name: username, role: "Quản lý", id: currentUser.uid };
                 currentData.participants.push(newParticipant);
 
@@ -451,7 +443,6 @@
                     .eq('id', roomId);
 
                 if (updateError) throw updateError;
-
                 currentRoomId = roomId;
                 closePopup('joinPopup');
                 updateUIJoined(roomId, "Quản lý");
@@ -476,7 +467,6 @@
                     let v2List = [];
                     if (workbook.Sheets["Vòng 2"]) {
                         const s2 = workbook.Sheets["Vòng 2"];
-                        // Lấy 3 video từ A2-B2, A3-B3, A4-B4
                         for (let i = 2; i <= 4; i++) {
                             const topic = s2[`A${i}`]?.v || `Video ${i-1}`;
                             const url = s2[`B${i}`]?.v || "";
@@ -486,7 +476,6 @@
                     let v3Url = "";
                     if (workbook.Sheets["Vòng 3"]) v3Url = workbook.Sheets["Vòng 3"]['A2']?.v || "";
 
-                    // Lấy dữ liệu hiện tại để merge (Quan trọng khi dùng JSONB)
                     const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
                     if (fetchError || !room) throw new Error("Không tìm thấy phòng để cập nhật");
 
@@ -502,7 +491,6 @@
                         .eq('id', currentRoomId);
 
                     if (updateError) throw updateError;
-
                     document.getElementById('uploadStatus').innerText = "Đã tải lên!";
                     setTimeout(() => document.getElementById('uploadStatus').innerText = "", 3000);
                     showMessage("Nhập dữ liệu thành công!");
@@ -513,8 +501,6 @@
 
         window.playRound = async (roundNum) => {
             if (!currentRoomId) return showMessage("Chưa vào phòng");
-
-            // Lấy dữ liệu hiện tại để cập nhật trường 'status'
             const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
             if (fetchError || !room) return showMessage("Lỗi: Không tìm thấy phòng.");
 
@@ -524,15 +510,11 @@
             const { error: updateError } = await supabase.from('rooms')
                 .update({ data: updatedData })
                 .eq('id', currentRoomId);
-
-            // Khi DB cập nhật, Realtime sẽ tự động kích hoạt updateRoundUI trên tất cả các máy Host/Manager/Contestant
             if (updateError) return showMessage("Lỗi điều khiển vòng chơi: " + updateError.message);
         };
 
         function listenToRoom(roomId) {
             if (roomSubscription) supabase.removeChannel(roomSubscription);
-
-            // 1. Lấy dữ liệu ban đầu
             (async () => {
                 const { data, error } = await supabase.from('rooms').select('data').eq('id', roomId).single();
                 if (data) {
@@ -544,13 +526,11 @@
                 }
             })();
 
-            // 2. Thiết lập Realtime Subscription để đồng bộ
             roomSubscription = supabase.channel(`room_${roomId}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
-                    // **Hàm này được gọi khi có bất kỳ thay đổi nào trong cột 'data' của phòng**
                     const roomData = payload.new.data;
-                    updateParticipantsList(roomData.participants); // Đồng bộ danh sách tham gia
-                    updateRoundUI(roomData.status); // Đồng bộ trạng thái chơi
+                    updateParticipantsList(roomData.participants);
+                    updateRoundUI(roomData.status);
                 })
                 .subscribe();
         }
@@ -574,7 +554,6 @@
             list.forEach(p => {
                 const div = document.createElement('div');
                 div.className = "list-item";
-
                 let icon = "fa-user";
                 let color = "#475569";
                 if (p.role === "Host") { icon = "fa-crown"; color = "#7c3aed"; }
@@ -610,5 +589,4 @@
         window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); }
     </script>
 </body>
-
 </html>
