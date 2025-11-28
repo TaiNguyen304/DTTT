@@ -460,25 +460,57 @@
         let currentSelectedRound = 1;
         let currentSelectedVideoIndex = 0;
         let roomSubscription = null;
+        let heartbeatInterval = null; // NEW: Dành cho nhịp tim của Contestant
 
-        // --- HÀM RỜI PHÒNG ĐƯỢC CẢI TIẾN ---
+        // --- HÀM HEARTBEAT (CỐT LÕI) ---
+        function startHeartbeat(roomId, uid) {
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+            const updateActiveStatus = async () => {
+                if (!roomId) return;
+                try {
+                    const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
+                    if (!room || !room.data || !room.data.participants) return;
+
+                    let updated = false;
+                    const newParticipants = room.data.participants.map(p => {
+                        if (p.id === uid) {
+                            updated = true;
+                            // Cập nhật timestamp
+                            return { ...p, last_active: Date.now() };
+                        }
+                        return p;
+                    });
+
+                    if (updated) {
+                        await supabase.from('rooms').update({
+                            data: { ...room.data, participants: newParticipants }
+                        }).eq('id', roomId);
+                    }
+                } catch (e) {
+                    console.error("Contestant Heartbeat error:", e.message);
+                }
+            };
+
+            // Gửi nhịp tim ngay lập tức và sau đó mỗi 5 giây
+            updateActiveStatus();
+            heartbeatInterval = setInterval(updateActiveStatus, 5000);
+        }
+
+        // --- HÀM XỬ LÝ RỜI PHÒNG ---
         const handleLeaveRoom = async () => {
+            if (heartbeatInterval) clearInterval(heartbeatInterval); // Tắt nhịp tim
             if (!currentRoomId) return;
 
-            // Lấy dữ liệu mới nhất
-            const { data: room } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+            const { data: room, error } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
             if (room && room.data && room.data.participants) {
-                // Lọc bỏ user hiện tại
                 const newParticipants = room.data.participants.filter(p => p.id !== currentUser.uid);
-
-                // Cập nhật DB. Dùng update để Host nhận được sự kiện
                 await supabase.from('rooms').update({
                     data: { ...room.data, participants: newParticipants }
                 }).eq('id', currentRoomId);
             }
         };
 
-        // Gắn sự kiện cả pagehide và beforeunload để đảm bảo hơn trên các trình duyệt
         window.addEventListener('beforeunload', handleLeaveRoom);
         window.addEventListener('pagehide', handleLeaveRoom);
         // ---------------------------
@@ -497,12 +529,12 @@
                 const currentData = room.data;
                 if (currentData.participants && currentData.participants.some(p => p.name === username)) return showMessage("Tên đã có người dùng");
 
-                // Thêm người chơi mới
-                const newParticipant = { name: username, role: "Thí sinh", id: currentUser.uid };
+                currentUser.uid = "contestant-" + Math.random().toString(36).substring(2, 9);
+                // THÊM last_active khi tham gia
+                const newParticipant = { name: username, role: "Thí sinh", id: currentUser.uid, last_active: Date.now() };
                 if (!currentData.participants) currentData.participants = [];
                 currentData.participants.push(newParticipant);
 
-                // Update DB -> Sẽ kích hoạt sự kiện cho Host
                 const { error: updateError } = await supabase.from('rooms')
                     .update({ data: currentData })
                     .eq('id', roomId);
@@ -515,21 +547,28 @@
                 document.getElementById('displayRoomId').innerText = roomId;
                 document.getElementById('displayUser').innerText = username;
 
+                // BẮT ĐẦU HEARTBEAT
+                startHeartbeat(currentRoomId, currentUser.uid);
+
                 listenToRoom(roomId);
             } catch (e) { showMessage("Lỗi tham gia phòng: " + e.message); }
         };
 
-        // ... (Giữ nguyên các hàm logic Video: selectRound, selectVideoIndex, toggleMute, saveRatio) ...
+        // --- CÁC HÀM KHÁC GIỮ NGUYÊN HOẶC ĐÃ ĐƯỢC CẢI TIẾN TRƯỚC ĐÓ ---
 
         window.selectRound = (roundNum) => {
             currentSelectedRound = roundNum;
-            if (roundNum !== 2) currentSelectedVideoIndex = 0;
+            if (roundNum !== 2) {
+                currentSelectedVideoIndex = 0;
+            }
             updateButtonStyles();
             loadVideoSource(roundNum);
         };
 
         window.selectVideoIndex = (index) => {
-            if (currentSelectedRound !== 2) return showMessage("Vui lòng chọn Vòng 2 trước.");
+            if (currentSelectedRound !== 2) {
+                return showMessage("Vui lòng chọn Vòng 2 trước khi chọn Video.");
+            }
             currentSelectedVideoIndex = index;
             updateButtonStyles();
             loadVideoSource(currentSelectedRound);
@@ -538,31 +577,33 @@
         window.toggleMute = () => {
             const vid = document.getElementById('mainVideo');
             vid.muted = !vid.muted;
-            document.getElementById('btnMute').innerHTML = vid.muted ? '<i class="fa-solid fa-volume-xmark"></i> Bật tiếng' : '<i class="fa-solid fa-volume-high"></i> Tắt tiếng';
+            const btn = document.getElementById('btnMute');
+            btn.innerHTML = vid.muted ? '<i class="fa-solid fa-volume-xmark"></i> Bật tiếng' : '<i class="fa-solid fa-volume-high"></i> Tắt tiếng';
         };
 
         window.saveRatio = () => {
             const radios = document.getElementsByName('ratio');
             let selected = "16-9";
             for (let r of radios) { if (r.checked) selected = r.value; }
+
             const wrapper = document.getElementById('videoWrapper');
-            wrapper.className = `video-wrapper aspect-${selected}`;
+            wrapper.classList.remove('aspect-4-3', 'aspect-9-16', 'aspect-16-9');
+            wrapper.classList.add(`aspect-${selected}`);
             closePopup('ratioPopup');
         };
 
         function listenToRoom(roomId) {
             if (roomSubscription) supabase.removeChannel(roomSubscription);
-
-            // Lấy data ban đầu
             (async () => {
-                const { data } = await supabase.from('rooms').select('data').eq('id', roomId).single();
+                const { data, error } = await supabase.from('rooms').select('data').eq('id', roomId).single();
                 if (data) {
                     updateRoomDataAndStatus(data.data);
                     updateButtonStyles();
+                } else if (error) {
+                    showMessage("Lỗi kết nối Realtime: " + error.message);
                 }
             })();
 
-            // Lắng nghe thay đổi
             roomSubscription = supabase.channel(`room_${roomId}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                     updateRoomDataAndStatus(payload.new.data);
@@ -576,12 +617,22 @@
             roomData.round3Video = data.round3Video;
 
             const status = data.status;
-            if (status && status.isPlaying) {
-                if (currentSelectedRound !== status.round || document.getElementById('mainVideo').paused) {
-                    currentSelectedRound = status.round;
-                    if (currentSelectedRound === 2) currentSelectedVideoIndex = 0;
+            if (status) {
+                if (status.isPlaying) {
+                    if (currentSelectedRound !== status.round || document.getElementById('mainVideo').paused) {
+                        currentSelectedRound = status.round;
+                        if (currentSelectedRound === 2) {
+                            currentSelectedVideoIndex = 0;
+                        }
+                        updateButtonStyles();
+                        loadVideoSource(status.round, true);
+                    }
+                    const activeBtn = document.getElementById(`btnRound${status.round}`);
+                    if (activeBtn) {
+                        activeBtn.className = "btn btn-playing";
+                    }
+                } else {
                     updateButtonStyles();
-                    loadVideoSource(status.round, true);
                 }
             }
         }
@@ -595,34 +646,40 @@
             }
             else if (roundNum === 3) src = roomData.round3Video;
 
-            if (vid.getAttribute('src') !== src) {
-                vid.src = src || "";
-                if (autoPlay && src) vid.play().catch(e => console.log("Autoplay prevented"));
-            }
+            const currentSrc = vid.getAttribute('src');
+            if (currentSrc !== src) vid.src = src;
+            if (!src) vid.src = "";
+            if (autoPlay && src) vid.play().catch(e => console.log("Autoplay blocked", e));
         }
 
         function updateButtonStyles() {
             [1, 2, 3].forEach(i => {
                 const btn = document.getElementById(`btnRound${i}`);
-                btn.className = (i === currentSelectedRound) ? "btn btn-active-round" : "btn btn-red";
+                btn.className = "btn btn-red";
             });
+            const selectedRoundBtn = document.getElementById(`btnRound${currentSelectedRound}`);
+            if (selectedRoundBtn) selectedRoundBtn.className = "btn btn-active-round";
 
             [0, 1, 2].forEach(i => {
                 const btn = document.getElementById(`btnVidIndex${i}`);
-                if (roomData.round2Videos.length > i) btn.innerHTML = roomData.round2Videos[i].topic || `Video ${i + 1}`;
-                else btn.innerHTML = `Video ${i + 1}`;
+                if (roomData.round2Videos.length > i) {
+                    btn.innerHTML = roomData.round2Videos[i].topic || `Video ${i + 1}`;
+                } else {
+                    btn.innerHTML = `Video ${i + 1}`;
+                }
 
                 btn.className = "btn btn-video";
-                if (currentSelectedRound === 2 && i === currentSelectedVideoIndex) btn.className = "btn btn-video-selected";
+                if (currentSelectedRound === 2 && i === currentSelectedVideoIndex) {
+                    btn.className = "btn btn-video-selected";
+                }
             });
-
-            // Cập nhật trạng thái đang chơi (màu xanh)
-            const playingBtn = document.getElementById(`btnRound${currentSelectedRound}`);
-            if (playingBtn && !document.getElementById('mainVideo').paused) playingBtn.className = "btn btn-playing";
         }
 
         document.getElementById('mainVideo').onended = () => updateButtonStyles();
-        document.getElementById('mainVideo').onplay = () => updateButtonStyles();
+        document.getElementById('mainVideo').onplay = () => {
+            const btn = document.getElementById(`btnRound${currentSelectedRound}`);
+            if (btn) btn.className = "btn btn-playing";
+        };
 
         window.openPopup = (id) => document.getElementById(id).style.display = 'flex';
         window.closePopup = (id) => document.getElementById(id).style.display = 'none';
