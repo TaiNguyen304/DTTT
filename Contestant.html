@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* CSS VẪN GIỮ NGUYÊN */
+        /* CSS ĐÃ CẬP NHẬT */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -124,8 +124,6 @@
         .btn:hover {
             filter: brightness(1.1);
             transform: translateY(-1px);
-            background-color: orange;
-            color: white;
         }
 
         .btn:active {
@@ -146,6 +144,29 @@
             background-color: black;
             color: white;
         }
+        
+        /* CSS cho nút Tỉ lệ (mới) */
+        .btn-yellow {
+            background-color: #ffc107; /* Màu vàng đậm */
+            color: black;
+            font-weight: bold;
+        }
+        .btn-yellow:hover {
+            background-color: #ffeb3b;
+        }
+
+        /* Nút trong Popup */
+        .btn-popup-success {
+            background-color: green; /* Áp dụng màu green */
+            color: white;
+            font-weight: bold;
+        }
+        .btn-popup-danger {
+            background-color: red; /* Đóng màu red */
+            color: white;
+            font-weight: bold;
+        }
+
 
         /* Vòng 1/2/3 - Trạng thái được chọn */
         .btn-active-round {
@@ -160,18 +181,18 @@
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
         }
 
-        /* Bổ sung style cho hàng nút Video 1/2/3 theo yêu cầu */
+        /* Bổ sung style cho hàng nút Video 1/2/3 */
         .btn-video {
-            background-color: blue; /* Màu blue mặc định */
+            background-color: blue;
             color: white;
             font-weight: bold;
         }
         .btn-video:hover {
-            background-color: orange; /* Hover là màu orange */
+            background-color: orange;
             color: white;
         }
         .btn-video-selected {
-            background-color: green; /* Chọn là màu green */
+            background-color: green;
             color: white;
             font-weight: bold;
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
@@ -207,14 +228,21 @@
             margin-left: 8px;
         }
 
+        /* Sửa lại grid-template-columns để chứa 4 nút */
         .video-controls-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr); /* Đã đổi từ 3 sang 4 */
             gap: 12px;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px; /* Tăng max-width để chứa 4 nút */
             margin-bottom: 12px;
         }
+        /* Giữ lại 3 nút cho Vòng 1/2/3 */
+        #roundControlsRow {
+            grid-template-columns: repeat(3, 1fr);
+            max-width: 600px;
+        }
+
 
         .video-wrapper {
             width: 100%;
@@ -241,7 +269,7 @@
             gap: 8px;
             opacity: 0.7;
             transition: opacity 0.3s;
-            z-index: 10; /* Đảm bảo nút điều khiển nằm trên video */
+            z-index: 10;
         }
 
         .video-wrapper:hover .overlay-controls {
@@ -257,6 +285,7 @@
             border-radius: 6px;
             cursor: pointer;
             backdrop-filter: blur(4px);
+            font-weight: bold; /* Đã thêm font-weight: bold theo yêu cầu */
         }
 
         .btn-overlay:hover {
@@ -285,7 +314,7 @@
             display: none;
             justify-content: center;
             align-items: center;
-            z-index: 999; /* Tăng Z-index cho popup để đảm bảo nằm trên mọi thứ */
+            z-index: 999;
         }
 
         .popup-card {
@@ -365,7 +394,7 @@
             </div>
         </div>
 
-        <div class="video-controls-row">
+        <div class="video-controls-row" id="roundControlsRow">
             <button id="btnRound1" onclick="selectRound(1)" class="btn btn-red">Vòng 1</button>
             <button id="btnRound2" onclick="selectRound(2)" class="btn btn-red">Vòng 2</button>
             <button id="btnRound3" onclick="selectRound(3)" class="btn btn-red">Vòng 3</button>
@@ -375,6 +404,9 @@
             <button id="btnVidIndex0" onclick="selectVideoIndex(0)" class="btn btn-video">Video 1</button>
             <button id="btnVidIndex1" onclick="selectVideoIndex(1)" class="btn btn-video">Video 2</button>
             <button id="btnVidIndex2" onclick="selectVideoIndex(2)" class="btn btn-video">Video 3</button>
+            <button id="btnRatio" onclick="openPopup('ratioPopup')" class="btn btn-yellow">
+                 <i class="fa-solid fa-expand"></i> Tỉ lệ
+            </button>
         </div>
 
 
@@ -382,9 +414,6 @@
             <video id="mainVideo" playsinline></video>
 
             <div class="overlay-controls">
-                <button onclick="openPopup('ratioPopup')" class="btn-overlay">
-                    <i class="fa-solid fa-expand"></i> Tỉ lệ
-                </button>
                 <button onclick="toggleMute()" id="btnMute" class="btn-overlay">
                     <i class="fa-solid fa-volume-high"></i> Tắt/Bật
                 </button>
@@ -407,8 +436,8 @@
             </label>
 
             <div class="popup-actions">
-                <button onclick="saveRatio()" class="btn btn-primary">Áp dụng</button>
-                <button onclick="closePopup('ratioPopup')" class="btn btn-dark">Đóng</button>
+                <button onclick="saveRatio()" class="btn btn-popup-success">Áp dụng</button>
+                <button onclick="closePopup('ratioPopup')" class="btn btn-popup-danger">Đóng</button>
             </div>
         </div>
     </div>
@@ -599,7 +628,7 @@
                 selectedRoundBtn.className = "btn btn-active-round";
             }
 
-            // Cập nhật hàng nút Video 1/2/3
+            // Cập nhật hàng nút Video 1/2/3 và nút Tỉ lệ
             const row2 = document.getElementById('videoControlsRow2');
             if (currentSelectedRound === 2) {
                 row2.style.display = 'grid';
@@ -607,7 +636,7 @@
                     const btn = document.getElementById(`btnVidIndex${i}`);
                     if (roomData.round2Videos.length > i) {
                         btn.style.display = 'flex';
-                        btn.innerHTML = roomData.round2Videos[i].topic || `Video ${i+1}`; // Hiển thị tên topic nếu có
+                        btn.innerHTML = roomData.round2Videos[i].topic || `Video ${i+1}`; 
                         btn.className = "btn btn-video";
                         if (i === currentSelectedVideoIndex) {
                             btn.className = "btn btn-video-selected";
@@ -616,6 +645,9 @@
                         btn.style.display = 'none';
                     }
                 });
+                // Đảm bảo nút Tỉ lệ luôn hiện khi Vòng 2 được chọn
+                document.getElementById('btnRatio').style.display = 'flex'; 
+
             } else {
                 row2.style.display = 'none';
             }
