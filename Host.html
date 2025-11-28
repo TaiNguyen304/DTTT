@@ -402,12 +402,12 @@
         let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) };
         let currentRoomId = null;
         let roomSubscription = null;
-        let heartbeatInterval = null; // NEW: Dành cho nhịp tim của Host/Manager hiện tại
-        let cleanupInterval = null; // NEW: Dành cho chức năng dọn dẹp của Host
+        let heartbeatInterval = null;
+        let cleanupInterval = null;
 
-        // --- CÁC HÀM HEARTBEAT VÀ CLEANUP (CỐT LÕI) ---
+        // --- CÁC HÀM HEARTBEAT VÀ CLEANUP (ĐÃ TỐI ƯU) ---
 
-        // Chức năng 1: Gửi nhịp tim của bản thân Host/Manager
+        // Chức năng 1: Gửi nhịp tim của bản thân Host/Manager (3 giây)
         function startHeartbeat(roomId, uid) {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
@@ -421,7 +421,6 @@
                     const newParticipants = room.data.participants.map(p => {
                         if (p.id === uid) {
                             updated = true;
-                            // Cập nhật timestamp (tính bằng milliseconds)
                             return { ...p, last_active: Date.now() };
                         }
                         return p;
@@ -433,13 +432,13 @@
                         }).eq('id', roomId);
                     }
                 } catch (e) {
-                    console.error("Heartbeat error:", e.message);
+                    console.error("Host Heartbeat error:", e.message);
                 }
             };
 
-            // Gửi nhịp tim ngay lập tức và sau đó mỗi 5 giây
             updateActiveStatus();
-            heartbeatInterval = setInterval(updateActiveStatus, 5000);
+            // Cập nhật: Tần suất Heartbeat là 3 giây
+            heartbeatInterval = setInterval(updateActiveStatus, 3000);
         }
 
         // Chức năng 2: Dọn dẹp người dùng không hoạt động (Chỉ Host mới chạy)
@@ -449,8 +448,8 @@
             const cleanupInactiveUsers = async () => {
                 if (!roomId) return;
                 const now = Date.now();
-                // Ngưỡng không hoạt động: 20 giây (20000ms)
-                const threshold = 20000;
+                // Cập nhật: Ngưỡng không hoạt động chỉ còn 10 giây (10000ms)
+                const threshold = 10000;
 
                 try {
                     const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
@@ -458,33 +457,33 @@
 
                     const currentParticipants = room.data.participants || [];
 
-                    // Lọc ra những người chơi còn hoạt động
                     const activeParticipants = currentParticipants.filter(p =>
-                        p.role === "Host" || // Luôn giữ Host, Host tự xử lý việc rời đi của mình
+                        p.role === "Host" ||
                         (p.last_active && (now - p.last_active < threshold))
                     );
 
-                    // Nếu danh sách thay đổi, cập nhật lại DB
                     if (activeParticipants.length < currentParticipants.length) {
-                        console.log(`[CLEANUP] Removing ${currentParticipants.length - activeParticipants.length} inactive user(s).`);
+                        console.log(`[CLEANUP SUCCESS] Removing ${currentParticipants.length - activeParticipants.length} inactive user(s).`);
 
                         await supabase.from('rooms').update({
                             data: { ...room.data, participants: activeParticipants }
                         }).eq('id', roomId);
+                    } else {
+                        console.log(`[CLEANUP RUNNING] No inactive users found. Total: ${currentParticipants.length}`);
                     }
                 } catch (e) {
                     console.error("Cleanup error:", e.message);
                 }
             };
 
-            // Chạy dọn dẹp mỗi 10 giây (10000ms)
-            cleanupInterval = setInterval(cleanupInactiveUsers, 10000);
+            // Cập nhật: Chạy dọn dẹp mỗi 5 giây (5000ms)
+            cleanupInterval = setInterval(cleanupInactiveUsers, 5000);
         }
 
-        // --- HÀM XỬ LÝ KHI NGƯỜI DÙNG RỜI PHÒNG (Cho Host/Manager) ---
+        // --- HÀM XỬ LÝ RỜI PHÒNG THÔNG THƯỜNG ---
         const handleLeaveRoom = async () => {
-            if (heartbeatInterval) clearInterval(heartbeatInterval); // Tắt nhịp tim
-            if (cleanupInterval) clearInterval(cleanupInterval); // Tắt dọn dẹp (nếu là Host)
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            if (cleanupInterval) clearInterval(cleanupInterval);
             if (!currentRoomId) return;
 
             const { data: room, error } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
@@ -506,7 +505,6 @@
 
             const initialData = {
                 hostId: currentUser.uid,
-                // THÊM last_active khi tạo phòng
                 participants: [{ name: "Host", role: "Host", id: currentUser.uid, last_active: Date.now() }],
                 round1Video: "", round2Videos: [], round3Video: "",
                 status: { round: 0, isPlaying: false, timestamp: Date.now() }
@@ -519,7 +517,6 @@
                 updateUIJoined(roomId, "Host");
                 showMessage(`Đã tạo phòng thành công!\nMã: ${roomId}`);
 
-                // BẮT ĐẦU HEARTBEAT VÀ CLEANUP
                 startHeartbeat(currentRoomId, currentUser.uid);
                 startCleanup(currentRoomId);
 
@@ -541,7 +538,7 @@
                 if (currentData.participants.some(p => p.name === username && (p.role === "Quản lý" || p.role === "Host"))) return showMessage("Tên Quản lý/Host đã tồn tại");
 
                 currentUser.uid = "manager-" + Math.random().toString(36).substring(2, 9);
-                // THÊM last_active khi tham gia
+
                 const newParticipant = { name: username, role: "Quản lý", id: currentUser.uid, last_active: Date.now() };
                 if (!currentData.participants) currentData.participants = [];
                 currentData.participants.push(newParticipant);
@@ -556,14 +553,13 @@
                 updateUIJoined(roomId, "Quản lý");
                 showMessage("Đăng nhập quản lý thành công!");
 
-                // BẮT ĐẦU HEARTBEAT (Manager cần gửi nhịp tim để Host biết họ còn hoạt động)
                 startHeartbeat(currentRoomId, currentUser.uid);
 
                 listenToRoom(roomId);
             } catch (e) { showMessage("Lỗi: " + e.message); }
         };
 
-        // --- CÁC HÀM KHÁC GIỮ NGUYÊN HOẶC ĐÃ ĐƯỢC CẢI TIẾN TRƯỚC ĐÓ ---
+        // --- CÁC HÀM KHÁC (GIỮ NGUYÊN) ---
 
         function listenToRoom(roomId) {
             if (roomSubscription) supabase.removeChannel(roomSubscription);
@@ -587,11 +583,6 @@
                 })
                 .subscribe();
         }
-
-        // Các hàm phụ trợ khác (updateParticipantsList, updateRoundUI, handleExcelUpload, playRound, v.v.)
-        // GIỮ NGUYÊN NHƯ PHIÊN BẢN SỬA ĐỔI TRƯỚC ĐÓ
-
-        // ... (Code cho handleExcelUpload, playRound, updateRoundUI, updateParticipantsList, resetPlayButtons, updateUIJoined) ...
 
         window.handleExcelUpload = (input) => {
             if (!currentRoomId) return showMessage("Vui lòng tạo/vào phòng trước");

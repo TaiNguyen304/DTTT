@@ -176,9 +176,8 @@
         }
 
         .btn-playing {
-            background-color: green;
+            background-color: purple;
             color: white;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
         }
 
         /* Bổ sung style cho hàng nút Video 1/2/3 */
@@ -460,9 +459,9 @@
         let currentSelectedRound = 1;
         let currentSelectedVideoIndex = 0;
         let roomSubscription = null;
-        let heartbeatInterval = null; // NEW: Dành cho nhịp tim của Contestant
+        let heartbeatInterval = null;
 
-        // --- HÀM HEARTBEAT (CỐT LÕI) ---
+        // --- HÀM HEARTBEAT (ĐÃ TỐI ƯU) ---
         function startHeartbeat(roomId, uid) {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
@@ -476,7 +475,6 @@
                     const newParticipants = room.data.participants.map(p => {
                         if (p.id === uid) {
                             updated = true;
-                            // Cập nhật timestamp
                             return { ...p, last_active: Date.now() };
                         }
                         return p;
@@ -492,14 +490,14 @@
                 }
             };
 
-            // Gửi nhịp tim ngay lập tức và sau đó mỗi 5 giây
             updateActiveStatus();
-            heartbeatInterval = setInterval(updateActiveStatus, 5000);
+            // Cập nhật: Tần suất Heartbeat là 3 giây
+            heartbeatInterval = setInterval(updateActiveStatus, 3000);
         }
 
-        // --- HÀM XỬ LÝ RỜI PHÒNG ---
+        // --- HÀM XỬ LÝ RỜI PHÒNG THÔNG THƯỜNG ---
         const handleLeaveRoom = async () => {
-            if (heartbeatInterval) clearInterval(heartbeatInterval); // Tắt nhịp tim
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
             if (!currentRoomId) return;
 
             const { data: room, error } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
@@ -530,7 +528,6 @@
                 if (currentData.participants && currentData.participants.some(p => p.name === username)) return showMessage("Tên đã có người dùng");
 
                 currentUser.uid = "contestant-" + Math.random().toString(36).substring(2, 9);
-                // THÊM last_active khi tham gia
                 const newParticipant = { name: username, role: "Thí sinh", id: currentUser.uid, last_active: Date.now() };
                 if (!currentData.participants) currentData.participants = [];
                 currentData.participants.push(newParticipant);
@@ -547,14 +544,13 @@
                 document.getElementById('displayRoomId').innerText = roomId;
                 document.getElementById('displayUser').innerText = username;
 
-                // BẮT ĐẦU HEARTBEAT
                 startHeartbeat(currentRoomId, currentUser.uid);
 
                 listenToRoom(roomId);
             } catch (e) { showMessage("Lỗi tham gia phòng: " + e.message); }
         };
 
-        // --- CÁC HÀM KHÁC GIỮ NGUYÊN HOẶC ĐÃ ĐƯỢC CẢI TIẾN TRƯỚC ĐÓ ---
+        // --- CÁC HÀM KHÁC (GIỮ NGUYÊN) ---
 
         window.selectRound = (roundNum) => {
             currentSelectedRound = roundNum;
