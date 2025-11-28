@@ -147,6 +147,7 @@
             color: white;
         }
 
+        /* Vòng 1/2/3 - Trạng thái được chọn */
         .btn-active-round {
             background-color: #ff00cc;
             color: white;
@@ -158,6 +159,24 @@
             color: white;
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
         }
+
+        /* Bổ sung style cho hàng nút Video 1/2/3 theo yêu cầu */
+        .btn-video {
+            background-color: blue; /* Màu blue mặc định */
+            color: white;
+            font-weight: bold;
+        }
+        .btn-video:hover {
+            background-color: orange; /* Hover là màu orange */
+            color: white;
+        }
+        .btn-video-selected {
+            background-color: green; /* Chọn là màu green */
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+        }
+
 
         #mainSection {
             width: 100%;
@@ -194,7 +213,7 @@
             gap: 12px;
             width: 100%;
             max-width: 600px;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
         }
 
         .video-wrapper {
@@ -205,6 +224,7 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 20px 25px -5p x rgba(0, 0, 0, 0.5);
+            margin-top: 12px;
         }
 
         video {
@@ -221,6 +241,7 @@
             gap: 8px;
             opacity: 0.7;
             transition: opacity 0.3s;
+            z-index: 10; /* Đảm bảo nút điều khiển nằm trên video */
         }
 
         .video-wrapper:hover .overlay-controls {
@@ -264,7 +285,7 @@
             display: none;
             justify-content: center;
             align-items: center;
-            z-index: 99;
+            z-index: 999; /* Tăng Z-index cho popup để đảm bảo nằm trên mọi thứ */
         }
 
         .popup-card {
@@ -302,7 +323,7 @@
 <body>
     <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
     <input type="hidden" id="supabaseKey"
-        value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
+        value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2eXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
 
     <div id="loginSection" class="login-card">
         <div class="login-header">
@@ -340,15 +361,22 @@
             </div>
             <div>
                 <i class="fa-solid fa-user" style="color: #818cf8; margin-right: 6px;"></i>
-                <span id="displayUser" style="font-weight: bold;">---</span>
+                <span id="displayUser" style="font-weight: bold; color: white;">---</span>
             </div>
         </div>
 
         <div class="video-controls-row">
-            <button id="btnVid1" onclick="selectVideo(1)" class="btn btn-red">Vòng 1</button>
-            <button id="btnVid2" onclick="selectVideo(2)" class="btn btn-red">Vòng 2</button>
-            <button id="btnVid3" onclick="selectVideo(3)" class="btn btn-red">Vòng 3</button>
+            <button id="btnRound1" onclick="selectRound(1)" class="btn btn-red">Vòng 1</button>
+            <button id="btnRound2" onclick="selectRound(2)" class="btn btn-red">Vòng 2</button>
+            <button id="btnRound3" onclick="selectRound(3)" class="btn btn-red">Vòng 3</button>
         </div>
+
+        <div class="video-controls-row" id="videoControlsRow2" style="display: none;">
+            <button id="btnVidIndex0" onclick="selectVideoIndex(0)" class="btn btn-video">Video 1</button>
+            <button id="btnVidIndex1" onclick="selectVideoIndex(1)" class="btn btn-video">Video 2</button>
+            <button id="btnVidIndex2" onclick="selectVideoIndex(2)" class="btn btn-video">Video 3</button>
+        </div>
+
 
         <div id="videoWrapper" class="video-wrapper aspect-16-9">
             <video id="mainVideo" playsinline></video>
@@ -397,14 +425,8 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
 
         // KHỞI TẠO SUPABASE
-        // Các giá trị được lấy từ các trường input hidden đã được thêm vào body
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value; 
-
-        // Đã xóa check key placeholder, vì key mới đã được dán
-        // if (!supabaseKey || supabaseKey.includes("DÁN")) {
-        //     console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
-        // }
 
         const supabase = createClient(supabaseUrl, supabaseKey);
         // END KHỞI TẠO SUPABASE
@@ -413,6 +435,7 @@
         let currentRoomId = null;
         let roomData = { round1Video: "", round2Videos: [], round3Video: "" };
         let currentSelectedRound = 1;
+        let currentSelectedVideoIndex = 0;
         let roomSubscription = null;
 
 
@@ -434,10 +457,10 @@
 
                 // 2. Cập nhật danh sách tham gia
                 const newParticipant = { name: username, role: "Thí sinh", id: currentUser.uid };
-                // Đảm bảo participants là một mảng trước khi push
                 if (!currentData.participants) currentData.participants = []; 
                 currentData.participants.push(newParticipant);
 
+                // **QUAN TRỌNG:** Việc cập nhật này sẽ kích hoạt Realtime Event cho các máy Host/Manager khác
                 const { error: updateError } = await supabase.from('rooms')
                     .update({ data: currentData })
                     .eq('id', roomId);
@@ -454,10 +477,25 @@
             } catch (e) { showMessage("Lỗi tham gia phòng: " + e.message); }
         };
 
-        window.selectVideo = (roundNum) => {
+        // Hàm chọn Vòng (Hàng nút trên)
+        window.selectRound = (roundNum) => {
             currentSelectedRound = roundNum;
+            // Nếu không phải Vòng 2, reset index về 0
+            if (roundNum !== 2) {
+                currentSelectedVideoIndex = 0;
+            }
             updateButtonStyles();
             loadVideoSource(roundNum);
+        };
+
+        // Hàm chọn Video trong Vòng 2 (Hàng nút dưới)
+        window.selectVideoIndex = (index) => {
+            if (currentSelectedRound !== 2) {
+                return showMessage("Vui lòng chọn Vòng 2 trước khi chọn Video.");
+            }
+            currentSelectedVideoIndex = index;
+            updateButtonStyles();
+            loadVideoSource(currentSelectedRound);
         };
 
         window.toggleMute = () => {
@@ -467,13 +505,16 @@
             btn.innerHTML = vid.muted ? '<i class="fa-solid fa-volume-xmark"></i> Bật tiếng' : '<i class="fa-solid fa-volume-high"></i> Tắt tiếng';
         };
 
+        // Sửa hàm saveRatio: Đảm bảo class aspect được thay đổi đúng
         window.saveRatio = () => {
             const radios = document.getElementsByName('ratio');
             let selected = "16-9";
             for (let r of radios) { if (r.checked) selected = r.value; }
 
             const wrapper = document.getElementById('videoWrapper');
+            // Remove tất cả các class aspect-ratio tiềm năng
             wrapper.classList.remove('aspect-4-3', 'aspect-9-16', 'aspect-16-9');
+            // Thêm class aspect-ratio mới
             wrapper.classList.add(`aspect-${selected}`);
             closePopup('ratioPopup');
         };
@@ -488,6 +529,7 @@
                 const { data, error } = await supabase.from('rooms').select('data').eq('id', roomId).single();
                 if (data) {
                     updateRoomDataAndStatus(data.data);
+                    updateButtonStyles(); // Cập nhật style sau khi có dữ liệu
                 } else if (error) {
                     showMessage("Lỗi kết nối Realtime: " + error.message);
                 }
@@ -509,14 +551,19 @@
             const status = data.status;
             if (status) {
                 if (status.isPlaying) {
+                    // Nếu Host chuyển round hoặc video đang dừng
                     if (currentSelectedRound !== status.round || document.getElementById('mainVideo').paused) {
                         currentSelectedRound = status.round;
+                        if (currentSelectedRound === 2) {
+                            currentSelectedVideoIndex = 0; 
+                        }
                         updateButtonStyles();
                         loadVideoSource(status.round, true);
                     }
-                    const activeBtn = document.getElementById(`btnVid${status.round}`);
+                    // Cập nhật trạng thái đang chơi
+                    const activeBtn = document.getElementById(`btnRound${status.round}`);
                     if (activeBtn) {
-                        activeBtn.className = "btn btn-playing"; // Playing state
+                        activeBtn.className = "btn btn-playing";
                     }
                 } else {
                     updateButtonStyles();
@@ -528,33 +575,59 @@
             const vid = document.getElementById('mainVideo');
             let src = "";
             if (roundNum === 1) src = roomData.round1Video;
-            else if (roundNum === 2 && roomData.round2Videos.length > 0) src = roomData.round2Videos[0].url;
+            else if (roundNum === 2 && roomData.round2Videos.length > currentSelectedVideoIndex) {
+                src = roomData.round2Videos[currentSelectedVideoIndex].url; 
+            }
             else if (roundNum === 3) src = roomData.round3Video;
 
             const currentSrc = vid.getAttribute('src');
             if (currentSrc !== src) vid.src = src;
 
-            if (!src) vid.src = ""; // Xóa src nếu không có
+            if (!src) vid.src = "";
 
             if (autoPlay && src) vid.play().catch(e => console.log("Autoplay blocked", e));
         }
 
         function updateButtonStyles() {
+            // Cập nhật hàng nút Vòng 1/2/3
             [1, 2, 3].forEach(i => {
-                const btn = document.getElementById(`btnVid${i}`);
+                const btn = document.getElementById(`btnRound${i}`);
                 btn.className = "btn btn-red";
             });
-            const selectedBtn = document.getElementById(`btnVid${currentSelectedRound}`);
-            if (selectedBtn) {
-                selectedBtn.className = "btn btn-active-round";
+            const selectedRoundBtn = document.getElementById(`btnRound${currentSelectedRound}`);
+            if (selectedRoundBtn) {
+                selectedRoundBtn.className = "btn btn-active-round";
+            }
+
+            // Cập nhật hàng nút Video 1/2/3
+            const row2 = document.getElementById('videoControlsRow2');
+            if (currentSelectedRound === 2) {
+                row2.style.display = 'grid';
+                [0, 1, 2].forEach(i => {
+                    const btn = document.getElementById(`btnVidIndex${i}`);
+                    if (roomData.round2Videos.length > i) {
+                        btn.style.display = 'flex';
+                        btn.innerHTML = roomData.round2Videos[i].topic || `Video ${i+1}`; // Hiển thị tên topic nếu có
+                        btn.className = "btn btn-video";
+                        if (i === currentSelectedVideoIndex) {
+                            btn.className = "btn btn-video-selected";
+                        }
+                    } else {
+                        btn.style.display = 'none';
+                    }
+                });
+            } else {
+                row2.style.display = 'none';
             }
         }
 
+        // Cập nhật trạng thái nút Vòng khi video kết thúc/bắt đầu
         document.getElementById('mainVideo').onended = () => updateButtonStyles();
         document.getElementById('mainVideo').onplay = () => {
-            const btn = document.getElementById(`btnVid${currentSelectedRound}`);
+            const btn = document.getElementById(`btnRound${currentSelectedRound}`);
             if (btn) btn.className = "btn btn-playing";
         };
+
 
         window.openPopup = (id) => document.getElementById(id).style.display = 'flex';
         window.closePopup = (id) => document.getElementById(id).style.display = 'none';

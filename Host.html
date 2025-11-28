@@ -184,6 +184,8 @@
             font-size: 1rem;
             outline: none;
             transition: border-color 0.2s;
+            /* Đã thêm font-weight: bold cho tất cả input */
+            font-weight: bold;
         }
 
         .form-input:focus {
@@ -289,7 +291,7 @@
     <div class="container">
         <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
         <input type="hidden" id="supabaseKey"
-            value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
+            value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2eXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
         <div class="card card-header">
             <h1><i class="fa-solid fa-gamepad" style="color: purple;"></i> Host Control Panel</h1>
             <div style="margin-top: 16px;">
@@ -349,7 +351,7 @@
                 <div class="input-group">
                     <label class="input-label">Mã phòng</label>
                     <input type="text" id="joinRoomCode" placeholder="Nhập 7 số..." class="form-input"
-                        style="text-align: center; font-weight: bold; letter-spacing: 2px;">
+                        style="text-align: center; letter-spacing: 2px;">
                 </div>
                 <div class="input-group">
                     <label class="input-label">Tên hiển thị</label>
@@ -394,15 +396,10 @@
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value;
 
-        // Đã xóa check key placeholder, vì key mới đã được dán
-        // if (supabaseKey.includes("DÁN")) {
-        //     console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
-        // }
-
         const supabase = createClient(supabaseUrl, supabaseKey);
         // END KHỞI TẠO SUPABASE
 
-        let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) }; // ID giả cho Host
+        let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) }; // ID giả cho Host/Manager
         let currentRoomId = null;
         let roomSubscription = null;
 
@@ -440,7 +437,7 @@
                 if (fetchError || !room) return showMessage("Phòng không tồn tại");
 
                 const currentData = room.data;
-                if (currentData.participants.some(p => p.name === username)) return showMessage("Tên đã tồn tại");
+                if (currentData.participants.some(p => p.name === username && (p.role === "Quản lý" || p.role === "Host"))) return showMessage("Tên Quản lý/Host đã tồn tại");
 
                 // 2. Cập nhật danh sách tham gia
                 const newParticipant = { name: username, role: "Quản lý", id: currentUser.uid };
@@ -454,7 +451,7 @@
 
                 currentRoomId = roomId;
                 closePopup('joinPopup');
-                updateUIJoined(roomId, username);
+                updateUIJoined(roomId, "Quản lý");
                 listenToRoom(roomId);
                 showMessage("Đăng nhập quản lý thành công!");
             } catch (e) { showMessage("Lỗi: " + e.message); }
@@ -476,8 +473,9 @@
                     let v2List = [];
                     if (workbook.Sheets["Vòng 2"]) {
                         const s2 = workbook.Sheets["Vòng 2"];
+                        // Lấy 3 video từ A2-B2, A3-B3, A4-B4
                         for (let i = 2; i <= 4; i++) {
-                            const topic = s2[`A${i}`]?.v || "";
+                            const topic = s2[`A${i}`]?.v || `Video ${i-1}`;
                             const url = s2[`B${i}`]?.v || "";
                             if (url) v2List.push({ topic, url });
                         }
@@ -524,12 +522,14 @@
                 .update({ data: updatedData })
                 .eq('id', currentRoomId);
 
+            // Khi DB cập nhật, Realtime sẽ tự động kích hoạt updateRoundUI trên tất cả các máy Host/Manager/Contestant
             if (updateError) return showMessage("Lỗi điều khiển vòng chơi: " + updateError.message);
         };
 
         function listenToRoom(roomId) {
             if (roomSubscription) supabase.removeChannel(roomSubscription);
 
+            // 1. Lấy dữ liệu ban đầu
             (async () => {
                 const { data, error } = await supabase.from('rooms').select('data').eq('id', roomId).single();
                 if (data) {
@@ -541,11 +541,13 @@
                 }
             })();
 
+            // 2. Thiết lập Realtime Subscription để đồng bộ
             roomSubscription = supabase.channel(`room_${roomId}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
+                    // **Hàm này được gọi khi có bất kỳ thay đổi nào trong cột 'data' của phòng**
                     const roomData = payload.new.data;
-                    updateParticipantsList(roomData.participants);
-                    updateRoundUI(roomData.status);
+                    updateParticipantsList(roomData.participants); // Đồng bộ danh sách tham gia
+                    updateRoundUI(roomData.status); // Đồng bộ trạng thái chơi
                 })
                 .subscribe();
         }
@@ -574,6 +576,7 @@
                 let color = "#475569";
                 if (p.role === "Host") { icon = "fa-crown"; color = "#7c3aed"; }
                 else if (p.role === "Quản lý") { icon = "fa-user-shield"; color = "#ea580c"; }
+                else if (p.role === "Thí sinh") { icon = "fa-user-astronaut"; color = "#22c55e"; }
 
                 div.innerHTML = `
                     <span style="font-weight: bold; color: ${color};"><i class="fa-solid ${icon}" style="margin-right: 8px;"></i>${p.name}</span>
