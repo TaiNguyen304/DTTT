@@ -263,14 +263,14 @@
             border-bottom: 1px solid #f1f5f9;
         }
 
-        /* Đã sửa: Thêm font-weight: bold cho vai trò */
+        /* Đã sửa: In đậm các vai trò */
         .role-badge {
             background: #e2e8f0;
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 0.75rem;
             color: #475569;
-            font-weight: bold; 
+            font-weight: bold;
         }
 
         @keyframes fadeIn {
@@ -402,6 +402,29 @@
         let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) };
         let currentRoomId = null;
         let roomSubscription = null;
+
+        // --- HÀM XỬ LÝ KHI NGƯỜI DÙNG (Quản lý) RỜI PHÒNG ---
+        const handleLeaveRoom = async () => {
+            if (!currentRoomId) return;
+
+            // Lấy dữ liệu mới nhất
+            const { data: room, error } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+            if (room && room.data && room.data.participants) {
+                // Lọc bỏ user hiện tại khỏi danh sách
+                const newParticipants = room.data.participants.filter(p => p.id !== currentUser.uid);
+                
+                // Cập nhật lại DB
+                await supabase.from('rooms').update({
+                    data: { ...room.data, participants: newParticipants }
+                }).eq('id', currentRoomId);
+            }
+        };
+
+        // Gắn sự kiện khi đóng tab/reload
+        window.addEventListener('beforeunload', (e) => {
+            handleLeaveRoom();
+        });
+        // ----------------------------------------------------
 
         window.createRoom = async () => {
             const roomId = Math.floor(1000000 + Math.random() * 9000000).toString();

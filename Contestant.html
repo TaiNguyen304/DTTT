@@ -124,6 +124,8 @@
         .btn:hover {
             filter: brightness(1.1);
             transform: translateY(-1px);
+            background-color: orange;
+            color: white;
         }
 
         .btn:active {
@@ -147,19 +149,19 @@
         
         /* CSS cho nút Tỉ lệ (mới) - Màu vàng */
         .btn-yellow {
-            background-color: yellow; 
+            background-color: yellow; /* Vàng sáng hơn chút cho dễ nhìn */
             color: black;
             font-weight: bold;
         }
 
         /* Nút trong Popup */
         .btn-popup-success {
-            background-color: green; /* Áp dụng màu green */
+            background-color: green; 
             color: white;
             font-weight: bold;
         }
         .btn-popup-danger {
-            background-color: red; /* Đóng màu red */
+            background-color: red; 
             color: white;
             font-weight: bold;
         }
@@ -452,6 +454,29 @@
         let currentSelectedRound = 1;
         let currentSelectedVideoIndex = 0;
         let roomSubscription = null;
+
+        // --- HÀM XỬ LÝ RỜI PHÒNG ---
+        const handleLeaveRoom = async () => {
+            if (!currentRoomId) return;
+
+            // Lấy dữ liệu mới nhất
+            const { data: room, error } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+            if (room && room.data && room.data.participants) {
+                // Lọc bỏ user hiện tại khỏi danh sách
+                const newParticipants = room.data.participants.filter(p => p.id !== currentUser.uid);
+                
+                // Cập nhật lại DB
+                await supabase.from('rooms').update({
+                    data: { ...room.data, participants: newParticipants }
+                }).eq('id', currentRoomId);
+            }
+        };
+
+        // Gắn sự kiện khi đóng tab/reload
+        window.addEventListener('beforeunload', (e) => {
+            handleLeaveRoom();
+        });
+        // ---------------------------
 
         window.joinRoom = async () => {
             const roomId = document.getElementById('loginRoom').value;
