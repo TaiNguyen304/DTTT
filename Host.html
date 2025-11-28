@@ -288,7 +288,8 @@
 
     <div class="container">
         <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
-        <input type="hidden" id="supabaseKey" value="DÁN_SUPABASE_KEY_CỦA_BẠN_VÀO_ĐÂY">
+        <input type="hidden" id="supabaseKey"
+            value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTU2Mjc4NTYsImV4cCI6MTk3MDcwMzQ1Nn0.ey3hG6ciO1UZIIN1I1N1R5C1KiYCYC29_eYPC3H9i0IZdXE">
         <div class="card card-header">
             <h1><i class="fa-solid fa-gamepad" style="color: purple;"></i> Host Control Panel</h1>
             <div style="margin-top: 16px;">
@@ -391,7 +392,7 @@
 
         // KHỞI TẠO SUPABASE
         const supabaseUrl = document.getElementById('supabaseUrl').value;
-        const supabaseKey = document.getElementById('supabaseKey').value; 
+        const supabaseKey = document.getElementById('supabaseKey').value;
 
         if (supabaseKey.includes("DÁN")) {
             console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
@@ -399,7 +400,7 @@
 
         const supabase = createClient(supabaseUrl, supabaseKey);
         // END KHỞI TẠO SUPABASE
-        
+
         let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) }; // ID giả cho Host
         let currentRoomId = null;
         let roomSubscription = null;

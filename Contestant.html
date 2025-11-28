@@ -300,6 +300,9 @@
 </head>
 
 <body>
+    <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
+    <input type="hidden" id="supabaseKey"
+        value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2cXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTU2Mjc4NTYsImV4cCI6MTk3MDcwMzQ1Nn0.ey3hG6ciO1UZIIN1I1N1R5C1KiYCYC29_eYPC3H9i0IZdXE">
 
     <div id="loginSection" class="login-card">
         <div class="login-header">
@@ -394,10 +397,11 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
 
         // KHỞI TẠO SUPABASE
+        // Các giá trị được lấy từ các trường input hidden đã được thêm vào body
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value; 
 
-        if (supabaseKey.includes("DÁN")) {
+        if (!supabaseKey || supabaseKey.includes("DÁN")) {
             console.error("LỖI CẤU HÌNH: Vui lòng dán Supabase Key vào trường ẩn.");
         }
 
@@ -424,10 +428,13 @@
                 if (fetchError || !room) return showMessage("Phòng không tồn tại");
 
                 const currentData = room.data;
-                if (currentData.participants.some(p => p.name === username)) return showMessage("Tên đã có người dùng");
+                // Kiểm tra xem tên đã tồn tại chưa
+                if (currentData.participants && currentData.participants.some(p => p.name === username)) return showMessage("Tên đã có người dùng");
 
                 // 2. Cập nhật danh sách tham gia
                 const newParticipant = { name: username, role: "Thí sinh", id: currentUser.uid };
+                // Đảm bảo participants là một mảng trước khi push
+                if (!currentData.participants) currentData.participants = []; 
                 currentData.participants.push(newParticipant);
 
                 const { error: updateError } = await supabase.from('rooms')
