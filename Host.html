@@ -507,7 +507,7 @@
                 // THÊM last_active khi tạo phòng
                 participants: [{ name: "Host", role: "Host", id: currentUser.uid, last_active: Date.now() }],
                 round1Video: "", round2Videos: [], round3Video: "",
-                status: { round: 0, isPlaying: false, timestamp: Date.now() }
+                status: { round: 0, isPlaying: false, timestamp: Date.now(), videoIndex: 0 } // Thêm videoIndex
             };
 
             try {
@@ -561,7 +561,7 @@
             } catch (e) { showMessage("Lỗi: " + e.message); }
         };
 
-        // --- CÁC HÀM KHÁC (GIỮ NGUYÊN) ---
+        // --- CÁC HÀM KHÁC ---
 
         function listenToRoom(roomId) {
             if (roomSubscription) supabase.removeChannel(roomSubscription);
@@ -634,28 +634,55 @@
             reader.readAsArrayBuffer(file);
         };
 
+        // --- HÀM SỬA ĐỔI: TÍCH HỢP LOGIC BẬT/TẮT (TOGGLE) ---
         window.playRound = async (roundNum) => {
             if (!currentRoomId) return showMessage("Chưa vào phòng");
+
+            // 1. Fetch current room data
             const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
             if (fetchError || !room) return showMessage("Lỗi: Không tìm thấy phòng.");
 
-            const status = { round: roundNum, isPlaying: true, timestamp: Date.now() };
+            const currentStatus = room.data.status || { round: 0, isPlaying: false, timestamp: Date.now() };
+
+            let status;
+
+            // Kiểm tra: Nếu đang phát đúng vòng này -> Tắt
+            if (currentStatus.round === roundNum && currentStatus.isPlaying) {
+                // Tắt video: Giữ vòng, đặt isPlaying = false. Nút sẽ chuyển sang màu ff00cc (btn-pink).
+                status = { round: roundNum, isPlaying: false, timestamp: Date.now(), videoIndex: currentStatus.videoIndex };
+            } else {
+                // Phát video: Đặt vòng mới, đặt isPlaying = true. Nút sẽ chuyển sang màu green (btn-playing).
+                // Giữ lại videoIndex nếu có (chỉ quan trọng cho vòng 2, nhưng giữ lại cho đồng bộ)
+                status = { round: roundNum, isPlaying: true, timestamp: Date.now(), videoIndex: currentStatus.videoIndex };
+            }
+
             const updatedData = { ...room.data, status: status };
 
+            // 2. Update DB
             const { error: updateError } = await supabase.from('rooms')
                 .update({ data: updatedData })
                 .eq('id', currentRoomId);
             if (updateError) return showMessage("Lỗi điều khiển vòng chơi: " + updateError.message);
         };
+        // -------------------------------------------------------------------------
 
         function updateRoundUI(status) {
             if (status) {
-                resetPlayButtons();
-                if (status.isPlaying) {
+                resetPlayButtons(); // Đặt tất cả về btn-pink (màu ff00cc)
+
+                // Nếu có vòng được chọn (dù đang phát hay đã dừng)
+                if (status.round > 0) {
                     const btn = document.getElementById(`btnPlay${status.round}`);
                     if (btn) {
-                        btn.className = "btn btn-playing";
-                        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang phát Vòng ${status.round}`;
+                        if (status.isPlaying) {
+                            // Đang phát: Màu green
+                            btn.className = "btn btn-playing";
+                            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang phát Vòng ${status.round}`;
+                        } else {
+                            // Đã dừng: Màu ff00cc (Đã được resetPlayButtons đặt) - Chỉ cần cập nhật text
+                            btn.className = "btn btn-pink"; // Giữ nguyên btn-pink
+                            btn.innerHTML = `<i class="fa-solid fa-play"></i> Vòng ${status.round} (Dừng)`;
+                        }
                     }
                 }
             }
