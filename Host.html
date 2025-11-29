@@ -581,7 +581,8 @@
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                     const roomData = payload.new.data;
                     updateParticipantsList(roomData.participants);
-                    updateRoundUI(roomData.status);
+                    // Dù có Realtime update, ta vẫn gọi updateRoundUI để đảm bảo đồng bộ
+                    updateRoundUI(roomData.status); 
                 })
                 .subscribe();
         }
@@ -634,7 +635,7 @@
             reader.readAsArrayBuffer(file);
         };
 
-        // --- HÀM SỬA ĐỔI: TÍCH HỢP LOGIC BẬT/TẮT (TOGGLE) ---
+        // --- HÀM SỬA ĐỔI: playRound (Cập nhật giao diện ngay lập tức) ---
         window.playRound = async (roundNum) => {
             if (!currentRoomId) return showMessage("Chưa vào phòng");
 
@@ -648,15 +649,18 @@
 
             // Kiểm tra: Nếu đang phát đúng vòng này -> Tắt
             if (currentStatus.round === roundNum && currentStatus.isPlaying) {
-                // Tắt video: Giữ vòng, đặt isPlaying = false. Nút sẽ chuyển sang màu ff00cc (btn-pink).
+                // Tắt video: Chuyển sang trạng thái Dừng (isPlaying = false). Màu: ff00cc.
                 status = { round: roundNum, isPlaying: false, timestamp: Date.now(), videoIndex: currentStatus.videoIndex };
             } else {
-                // Phát video: Đặt vòng mới, đặt isPlaying = true. Nút sẽ chuyển sang màu green (btn-playing).
-                // Giữ lại videoIndex nếu có (chỉ quan trọng cho vòng 2, nhưng giữ lại cho đồng bộ)
+                // Phát video: Chuyển sang trạng thái Phát (isPlaying = true). Màu: green.
+                // Nếu đang phát vòng khác, nó sẽ tự động bị reset bởi updateRoundUI.
                 status = { round: roundNum, isPlaying: true, timestamp: Date.now(), videoIndex: currentStatus.videoIndex };
             }
 
             const updatedData = { ...room.data, status: status };
+            
+            // *** BƯỚC MỚI: Cập nhật giao diện Host NGAY LẬP TỨC (trước khi update DB) ***
+            updateRoundUI(status); 
 
             // 2. Update DB
             const { error: updateError } = await supabase.from('rooms')
