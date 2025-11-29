@@ -758,6 +758,77 @@
         window.closePopup = (id) => document.getElementById(id).style.display = 'none';
         window.openListPopup = () => { if (!currentRoomId) return showMessage("Chưa có phòng"); openPopup('listPopup'); }
         window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); }
+
+        // --- BỔ SUNG HÀM JOIN ROOM CHO THÍ SINH ---
+        window.joinRoom = async () => {
+            const roomId = document.getElementById('loginRoom').value;
+            const username = document.getElementById('loginUser').value;
+
+            // 1. Kiểm tra đầu vào
+            if (!roomId) return showMessage("Vui lòng nhập Mã phòng");
+            if (!username) return showMessage("Vui lòng nhập Tên hiển thị");
+
+            try {
+                // 2. Lấy dữ liệu phòng từ Supabase
+                const { data: room, error: fetchError } = await supabase
+                    .from('rooms')
+                    .select('data')
+                    .eq('id', roomId)
+                    .single();
+
+                if (fetchError || !room) {
+                    return showMessage("Phòng không tồn tại hoặc sai mã!");
+                }
+
+                const currentData = room.data;
+
+                // 3. Kiểm tra tên trùng (tùy chọn, nhưng nên có)
+                if (currentData.participants && currentData.participants.some(p => p.name === username)) {
+                }
+
+                // 4. Tạo thông tin người dùng mới
+                currentUser.uid = "contestant-" + Math.random().toString(36).substring(2, 9);
+                
+                const newParticipant = {
+                    name: username,
+                    role: "Thí sinh",
+                    id: currentUser.uid,
+                    last_active: Date.now() // Quan trọng cho tính năng Heartbeat
+                };
+
+                // 5. Cập nhật danh sách người tham gia
+                let participants = currentData.participants || [];
+                participants.push(newParticipant);
+
+                const { error: updateError } = await supabase
+                    .from('rooms')
+                    .update({
+                        data: { ...currentData, participants: participants }
+                    })
+                    .eq('id', roomId);
+
+                if (updateError) throw updateError;
+
+                // 6. Cập nhật giao diện thành công
+                currentRoomId = roomId;
+                
+                // Ẩn màn hình đăng nhập, hiện màn hình chính
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'flex';
+                
+                // Hiển thị thông tin trên thanh info-bar
+                document.getElementById('displayRoomId').innerText = roomId;
+                document.getElementById('displayUser').innerText = username;
+
+                // 7. Bắt đầu gửi nhịp tim và lắng nghe sự kiện
+                startHeartbeat(currentRoomId, currentUser.uid);
+                listenToRoom(roomId);
+
+            } catch (e) {
+                console.error(e);
+                showMessage("Lỗi khi tham gia: " + e.message);
+            }
+        };
     </script>
 </body>
 
