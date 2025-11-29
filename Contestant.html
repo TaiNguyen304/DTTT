@@ -121,11 +121,12 @@
             width: 100%;
         }
 
+        /* Hover chung: Chuyển sang màu orange, chữ trắng đậm */
         .btn:hover {
             filter: brightness(1.1);
             transform: translateY(-1px);
             background-color: orange;
-            color: white;
+            color: white !important;
         }
 
         .btn:active {
@@ -137,15 +138,42 @@
             color: white;
         }
 
-        .btn-red {
+        /* --- CẬP NHẬT NÚT VÒNG (ROUND BUTTONS) --- */
+        /* Mặc định: Màu red, chữ đậm trắng */
+        .btn-round-default {
             background-color: red;
             color: white;
+            font-weight: bold;
         }
+
+        /* Trạng thái được chọn: Màu ff00cc, chữ đậm trắng */
+        .btn-active-round {
+            background-color: #ff00cc;
+            color: white;
+            box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.4);
+            font-weight: bold;
+        }
+
+        /* Trạng thái đang phát: Màu green, chữ đậm trắng */
+        .btn-playing {
+            background-color: green;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Cập nhật hover cho các nút vòng */
+        .btn-round-default:hover, 
+        .btn-active-round:hover, 
+        .btn-playing:hover {
+            background-color: orange;
+            color: white;
+        }
+        /* ------------------------------------------- */
+
 
         /* CSS cho nút Tỉ lệ (mới) - Màu vàng */
         .btn-yellow {
             background-color: yellow;
-            /* Vàng sáng hơn chút cho dễ nhìn */
             color: black;
             font-weight: bold;
         }
@@ -163,35 +191,28 @@
             font-weight: bold;
         }
 
-        /* Vòng 1/2/3 - Trạng thái được chọn */
-        .btn-active-round {
-            background-color: #ff00cc;
-            color: white;
-            box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.4);
-        }
-
-        .btn-playing {
-            background-color: green;
-            color: white;
-        }
-
-        /* Bổ sung style cho hàng nút Video 1/2/3 */
+        /* --- CẬP NHẬT NÚT VIDEO (VIDEO BUTTONS) --- */
+        /* Mặc định: Màu blue, chữ đậm trắng */
         .btn-video {
             background-color: blue;
             color: white;
             font-weight: bold;
         }
 
-        .btn-video:hover {
-            background-color: orange;
-            color: white;
-        }
-
+        /* Được chọn: Màu green, chữ đậm trắng */
         .btn-video-selected {
             background-color: green;
             color: white;
             font-weight: bold;
         }
+
+        /* Cập nhật hover cho nút Video (Giữ nguyên orange, chữ trắng) */
+        .btn-video:hover, .btn-video-selected:hover {
+            background-color: orange;
+            color: white;
+        }
+        /* ------------------------------------------- */
+
 
         #mainSection {
             width: 100%;
@@ -281,7 +302,6 @@
             cursor: pointer;
             backdrop-filter: blur(4px);
             font-weight: bold;
-            /* Đã in đậm chữ Mute */
         }
 
         .btn-overlay:hover {
@@ -394,9 +414,9 @@
         </div>
 
         <div class="video-controls-row" id="roundControlsRow">
-            <button id="btnRound1" onclick="selectRound(1)" class="btn btn-red">Vòng 1</button>
-            <button id="btnRound2" onclick="selectRound(2)" class="btn btn-red">Vòng 2</button>
-            <button id="btnRound3" onclick="selectRound(3)" class="btn btn-red">Vòng 3</button>
+            <button id="btnRound1" onclick="selectRound(1)" class="btn btn-round-default">Vòng 1</button>
+            <button id="btnRound2" onclick="selectRound(2)" class="btn btn-round-default">Vòng 2</button>
+            <button id="btnRound3" onclick="selectRound(3)" class="btn btn-round-default">Vòng 3</button>
         </div>
 
         <div class="video-controls-row" id="videoControlsRow2">
@@ -490,21 +510,36 @@
             });
         }
 
+        // Hàm phụ: Cập nhật màu nút Vòng (được gọi từ selectRound và lắng nghe Realtime)
+        function updateRoundButtonColor(roundNum, currentData) {
+            const btn = document.getElementById(`btnRound${roundNum}`);
+            
+            // Xóa hết các class màu cũ
+            btn.classList.remove('btn-active-round', 'btn-playing', 'btn-round-default');
+
+            const isSelected = (roundNum === currentRound);
+            const isPlaying = isSelected && currentData && currentData.status && currentData.status.isPlaying;
+            
+            if (isPlaying) {
+                // Đang phát: Màu green
+                btn.classList.add('btn-playing');
+            } else if (isSelected) {
+                // Được chọn (không phát/hết): Màu ff00cc
+                btn.classList.add('btn-active-round');
+            } else {
+                // Không được chọn: Màu red
+                btn.classList.add('btn-round-default');
+            }
+        }
+
         // 1. NÚT VÒNG 1 / VÒNG 2 / VÒNG 3
         window.selectRound = (roundNum) => {
             if (!currentRoomData) return showMessage("Vui lòng tham gia phòng trước.");
             currentRound = roundNum;
 
-            // Cập nhật giao diện nút bấm (Sử dụng class CSS: btn-active-round)
+            // Cập nhật giao diện nút bấm
             [1, 2, 3].forEach(i => {
-                const btn = document.getElementById(`btnRound${i}`);
-                if (i === roundNum) {
-                    btn.classList.add('btn-active-round');
-                    btn.classList.remove('btn-red');
-                } else {
-                    btn.classList.remove('btn-active-round');
-                    btn.classList.add('btn-red');
-                }
+                updateRoundButtonColor(i, currentRoomData); // Cập nhật màu cho tất cả 3 nút
             });
 
             // Logic phát video theo vòng
@@ -671,6 +706,9 @@
                     // Nếu Host điều khiển thay đổi Vòng chơi (status)
                     if (newData.status && newData.status.round !== currentRound) {
                         window.selectRound(newData.status.round);
+                    } else if (newData.status && newData.status.round === currentRound) {
+                        // Nếu vẫn ở vòng đó, chỉ cần cập nhật trạng thái chơi (green/ff00cc)
+                        updateRoundButtonColor(currentRound, newData);
                     }
                     
                     // Nếu Host chuyển sang video con của Vòng 2
