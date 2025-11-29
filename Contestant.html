@@ -532,38 +532,37 @@
             }
         }
 
-        // 1. NÚT VÒNG 1 / VÒNG 2 / VÒNG 3
+        // 1. NÚT VÒNG 1 / VÒNG 2 / VÒNG 3 (ĐÃ SỬA ĐỔI LOGIC)
         window.selectRound = (roundNum) => {
             if (!currentRoomData) return showMessage("Vui lòng tham gia phòng trước.");
+            
+            // 1. Cập nhật trạng thái vòng đang được chọn
             currentRound = roundNum;
 
-            // Cập nhật giao diện nút bấm
+            // 2. Cập nhật giao diện nút bấm TRƯỚC (Đảm bảo nút được chọn có màu ff00cc/green)
             [1, 2, 3].forEach(i => {
                 updateRoundButtonColor(i, currentRoomData); // Cập nhật màu cho tất cả 3 nút
             });
 
-            // Logic phát video theo vòng
-            resetVideoButtons(); // Reset nút Video 1/2/3
+            // 3. Reset nút Video 1/2/3 và dừng video hiện tại
+            resetVideoButtons(); 
+            playVideo(null); // Dừng video nếu đang chạy
 
-            const videoPlayer = document.getElementById('mainVideo');
-
+            // 4. Xử lý logic phát video dựa trên dữ liệu (Nếu không có video, chỉ hiện thông báo)
             if (roundNum === 1) {
                 if (currentRoomData.round1Video) {
                     playVideo(currentRoomData.round1Video);
                 } else {
-                    playVideo(null);
                     showMessage("Chưa có Video Vòng 1.");
                 }
             } else if (roundNum === 3) {
                 if (currentRoomData.round3Video) {
                     playVideo(currentRoomData.round3Video);
                 } else {
-                    playVideo(null);
                     showMessage("Chưa có Video Vòng 3.");
                 }
             } else if (roundNum === 2) {
                 // Vòng 2: Phải chọn Video con
-                playVideo(null);
                 showMessage("Vòng 2: Vui lòng chọn Video 1, 2 hoặc 3 ở bên dưới.");
             }
         };
