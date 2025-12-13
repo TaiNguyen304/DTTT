@@ -582,7 +582,7 @@
                     const roomData = payload.new.data;
                     updateParticipantsList(roomData.participants);
                     // Dù có Realtime update, ta vẫn gọi updateRoundUI để đảm bảo đồng bộ
-                    updateRoundUI(roomData.status); 
+                    updateRoundUI(roomData.status);
                 })
                 .subscribe();
         }
@@ -658,9 +658,9 @@
             }
 
             const updatedData = { ...room.data, status: status };
-            
+
             // *** BƯỚC MỚI: Cập nhật giao diện Host NGAY LẬP TỨC (trước khi update DB) ***
-            updateRoundUI(status); 
+            updateRoundUI(status);
 
             // 2. Update DB
             const { error: updateError } = await supabase.from('rooms')
@@ -735,6 +735,10 @@
         window.closePopup = (id) => document.getElementById(id).style.display = 'none';
         window.openListPopup = () => { if (!currentRoomId) return showMessage("Chưa có phòng"); openPopup('listPopup'); }
         window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); }
+
+        document.addEventListener("contextmenu", function (e) {
+            e.preventDefault();
+        });
     </script>
 </body>
 

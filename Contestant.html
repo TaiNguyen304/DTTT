@@ -160,14 +160,15 @@
             color: white;
             font-weight: bold;
         }
-        
+
         /* Cập nhật hover cho các nút vòng */
-        .btn-round-default:hover, 
-        .btn-active-round:hover, 
+        .btn-round-default:hover,
+        .btn-active-round:hover,
         .btn-playing:hover {
             background-color: orange;
             color: white;
         }
+
         /* ------------------------------------------- */
 
 
@@ -207,10 +208,12 @@
         }
 
         /* Cập nhật hover cho nút Video (Giữ nguyên orange, chữ trắng) */
-        .btn-video:hover, .btn-video-selected:hover {
+        .btn-video:hover,
+        .btn-video-selected:hover {
             background-color: orange;
             color: white;
         }
+
         /* ------------------------------------------- */
 
 
@@ -513,13 +516,13 @@
         // Hàm phụ: Cập nhật màu nút Vòng (được gọi từ selectRound và lắng nghe Realtime)
         function updateRoundButtonColor(roundNum, currentData) {
             const btn = document.getElementById(`btnRound${roundNum}`);
-            
+
             // Xóa hết các class màu cũ
             btn.classList.remove('btn-active-round', 'btn-playing', 'btn-round-default');
 
             const isSelected = (roundNum === currentRound);
             const isPlaying = isSelected && currentData && currentData.status && currentData.status.isPlaying;
-            
+
             if (isPlaying) {
                 // Đang phát: Màu green
                 btn.classList.add('btn-playing');
@@ -535,7 +538,7 @@
         // 1. NÚT VÒNG 1 / VÒNG 2 / VÒNG 3 (ĐÃ SỬA ĐỔI LOGIC)
         window.selectRound = (roundNum) => {
             if (!currentRoomData) return showMessage("Vui lòng tham gia phòng trước.");
-            
+
             // 1. Cập nhật trạng thái vòng đang được chọn
             currentRound = roundNum;
 
@@ -545,7 +548,7 @@
             });
 
             // 3. Reset nút Video 1/2/3 và dừng video hiện tại
-            resetVideoButtons(); 
+            resetVideoButtons();
             playVideo(null); // Dừng video nếu đang chạy
 
             // 4. Xử lý logic phát video dựa trên dữ liệu (Nếu không có video, chỉ hiện thông báo)
@@ -659,7 +662,7 @@
 
             updateActiveStatus();
             // Gửi heartbeat mỗi 3 giây
-            heartbeatInterval = setInterval(updateActiveStatus, 3000); 
+            heartbeatInterval = setInterval(updateActiveStatus, 3000);
         }
 
         // Hàm xử lý khi rời phòng
@@ -709,7 +712,7 @@
                         // Nếu vẫn ở vòng đó, chỉ cần cập nhật trạng thái chơi (green/ff00cc)
                         updateRoundButtonColor(currentRound, newData);
                     }
-                    
+
                     // Nếu Host chuyển sang video con của Vòng 2
                     if (currentRound === 2 && newData.status && newData.status.videoIndex !== undefined) {
                         window.selectVideoIndex(newData.status.videoIndex);
@@ -746,7 +749,7 @@
 
                 // 3. Tạo thông tin người dùng mới
                 currentUser.uid = "contestant-" + Math.random().toString(36).substring(2, 9);
-                
+
                 const newParticipant = {
                     name: username,
                     role: "Thí sinh",
@@ -784,6 +787,10 @@
                 showMessage("Lỗi khi tham gia: " + e.message);
             }
         };
+
+        document.addEventListener("contextmenu", function (e) {
+            e.preventDefault();
+        });
     </script>
 </body>
 
