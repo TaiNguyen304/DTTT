@@ -26,7 +26,8 @@
             padding: 16px;
         }
 
-        .login-card {
+        .login-card,
+        .ready-card {
             background: white;
             width: 100%;
             max-width: 450px;
@@ -63,16 +64,25 @@
             color: white;
         }
 
+        .btn-success {
+            background-color: green;
+            color: white;
+            padding: 20px;
+            font-size: 1.2rem;
+        }
+
         .btn:hover {
             background-color: orange;
             color: white;
         }
 
-        #mainSection {
+        #mainSection,
+        #readySection {
+            display: none;
             width: 100%;
             max-width: 1200px;
-            display: none;
             flex-direction: column;
+            align-items: center;
         }
 
         .info-bar {
@@ -86,7 +96,6 @@
             margin-bottom: 24px;
         }
 
-        /* 3 Khung hình */
         .video-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -121,9 +130,9 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            background: black;
         }
 
-        /* Lớp che màu đỏ */
         .red-overlay {
             position: absolute;
             top: 0;
@@ -133,8 +142,6 @@
             background: red;
             z-index: 10;
             display: none;
-            align-items: center;
-            justify-content: center;
         }
 
         .video-container.masked .red-overlay {
@@ -146,7 +153,7 @@
             bottom: 10px;
             right: 10px;
             z-index: 20;
-            background: red;
+            background: rgba(255, 0, 0, 0.8);
             color: white;
             border: none;
             padding: 6px 12px;
@@ -190,6 +197,13 @@
         <button onclick="joinRoom()" class="btn btn-primary">Tham gia</button>
     </div>
 
+    <div id="readySection" class="ready-card">
+        <h2 style="margin-bottom: 15px;">Kết nối thành công!</h2>
+        <p style="margin-bottom: 20px; color: #666;">Vui lòng bấm nút dưới đây để cấp quyền phát video tự động từ Host.
+        </p>
+        <button onclick="readyToPlay()" class="btn btn-success">TÔI ĐÃ SẴN SÀNG</button>
+    </div>
+
     <div id="mainSection">
         <div class="info-bar">
             <span style="font-weight: bold;">PHÒNG: <b id="displayRoomId">---</b></span>
@@ -199,21 +213,21 @@
         <div class="video-grid">
             <div id="wrapper0" class="video-container" onclick="focusVideo(0)">
                 <div id="topic0" class="topic-label">Đang chờ...</div>
-                <video id="video0" playsinline></video>
+                <video id="video0" playsinline muted></video>
                 <div class="red-overlay"></div>
-                <button onclick="toggleMute(0, event)" id="mute0" class="mute-btn">TẮT TIẾNG</button>
+                <button onclick="toggleMute(0, event)" id="mute0" class="mute-btn">BẬT ÂM THANH</button>
             </div>
             <div id="wrapper1" class="video-container" onclick="focusVideo(1)">
                 <div id="topic1" class="topic-label">Đang chờ...</div>
-                <video id="video1" playsinline></video>
+                <video id="video1" playsinline muted></video>
                 <div class="red-overlay"></div>
-                <button onclick="toggleMute(1, event)" id="mute1" class="mute-btn">TẮT TIẾNG</button>
+                <button onclick="toggleMute(1, event)" id="mute1" class="mute-btn">BẬT ÂM THANH</button>
             </div>
             <div id="wrapper2" class="video-container" onclick="focusVideo(2)">
                 <div id="topic2" class="topic-label">Đang chờ...</div>
-                <video id="video2" playsinline></video>
+                <video id="video2" playsinline muted></video>
                 <div class="red-overlay"></div>
-                <button onclick="toggleMute(2, event)" id="mute2" class="mute-btn">TẮT TIẾNG</button>
+                <button onclick="toggleMute(2, event)" id="mute2" class="mute-btn">BẬT ÂM THANH</button>
             </div>
         </div>
     </div>
@@ -234,7 +248,9 @@
 
         let currentUser = { uid: "contestant-" + Math.random().toString(36).substring(2, 9) };
         let currentRoomId = null;
+        let lastStatusTimestamp = 0;
 
+        // Xử lý đăng nhập
         window.joinRoom = async () => {
             const roomId = document.getElementById('loginRoom').value;
             const username = document.getElementById('loginUser').value;
@@ -243,27 +259,28 @@
             const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
             if (!room) return showMessage("Phòng không tồn tại");
 
-            // --- ĐOẠN MÃ SỬA ĐỔI: KÍCH HOẠT VIDEO ---
-            // Ngay khi user click "Tham gia", ta cho video chạy "nháp" để trình duyệt cấp quyền
-            for (let i = 0; i < 3; i++) {
-                const v = document.getElementById(`video${i}`);
-                v.play().then(() => {
-                    v.pause(); // Phát rồi dừng ngay để lấy quyền autoplay
-                    v.muted = true;
-                }).catch(e => console.log("Chờ tương tác thêm..."));
-            }
-            // ---------------------------------------
-
             const currentData = room.data;
             currentData.participants.push({ name: username, role: "Thí sinh", id: currentUser.uid, last_active: Date.now() });
             await supabase.from('rooms').update({ data: currentData }).eq('id', roomId);
 
             currentRoomId = roomId;
             document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('mainSection').style.display = 'flex';
+            document.getElementById('readySection').style.display = 'flex'; // Chuyển sang màn hình Sẵn sàng
             document.getElementById('displayRoomId').innerText = roomId;
             document.getElementById('displayUser').innerText = username;
-            listenToRoom(roomId);
+        };
+
+        // Kích hoạt quyền Media (Quan trọng nhất)
+        window.readyToPlay = async () => {
+            // Mồi trình duyệt để cho phép autoplay sau này
+            for (let i = 0; i < 3; i++) {
+                const v = document.getElementById(`video${i}`);
+                v.play().then(() => v.pause()).catch(e => console.log("Unlock video:", i));
+            }
+
+            document.getElementById('readySection').style.display = 'none';
+            document.getElementById('mainSection').style.display = 'flex';
+            listenToRoom(currentRoomId);
         };
 
         window.focusVideo = (index) => {
@@ -280,20 +297,18 @@
         };
 
         window.toggleMute = (index, event) => {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             const v = document.getElementById(`video${index}`);
             v.muted = !v.muted;
-            document.getElementById(`mute${index}`).innerText = v.muted ? "BẬT TIẾNG" : "TẮT TIẾNG";
+            document.getElementById(`mute${index}`).innerText = v.muted ? "BẬT ÂM THANH" : "TẮT ÂM THANH";
         };
 
         function listenToRoom(roomId) {
-            let lastStatusTimestamp = 0; // Biến phụ để kiểm tra lệnh mới
-
             supabase.channel(`room_${roomId}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                     const data = payload.new.data;
 
-                    // 1. Cập nhật dữ liệu video & Preload
+                    // 1. Cập nhật URL & Chủ đề
                     if (data.round2Videos && data.round2Videos.length > 0) {
                         data.round2Videos.forEach((videoData, i) => {
                             const v = document.getElementById(`video${i}`);
@@ -306,22 +321,21 @@
                             if (videoData.url && v.getAttribute('data-loaded-url') !== videoData.url) {
                                 v.src = videoData.url;
                                 v.setAttribute('data-loaded-url', videoData.url);
+                                v.muted = true; // Luôn bắt đầu bằng muted
                                 v.load();
                             }
                         });
                     }
 
-                    // 2. Lệnh phát video - Chỉ phát khi có timestamp mới từ Host
+                    // 2. Lệnh phát video đồng loạt từ Host
                     if (data.status && data.status.isPlaying === true && data.status.timestamp !== lastStatusTimestamp) {
                         lastStatusTimestamp = data.status.timestamp;
 
                         for (let i = 0; i < 3; i++) {
                             const v = document.getElementById(`video${i}`);
-                            if (v.src && v.paused) { // Chỉ phát nếu đang dừng
-                                v.muted = true; // Bắt buộc muted để đảm bảo 100% tự động chạy được
-                                v.play().catch(err => {
-                                    console.error("Vẫn bị chặn! Cần click vào màn hình một lần nữa.");
-                                });
+                            if (v.src) {
+                                v.muted = true; // Chrome bắt buộc muted để autoplay
+                                v.play().catch(err => console.error("Phát video thất bại:", err));
                             }
                         }
                     }
