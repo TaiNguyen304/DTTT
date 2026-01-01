@@ -238,8 +238,21 @@
         window.joinRoom = async () => {
             const roomId = document.getElementById('loginRoom').value;
             const username = document.getElementById('loginUser').value;
+            if (!roomId || !username) return showMessage("Vui lòng nhập đủ thông tin");
+
             const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
             if (!room) return showMessage("Phòng không tồn tại");
+
+            // --- ĐOẠN MÃ SỬA ĐỔI: KÍCH HOẠT VIDEO ---
+            // Ngay khi user click "Tham gia", ta cho video chạy "nháp" để trình duyệt cấp quyền
+            for (let i = 0; i < 3; i++) {
+                const v = document.getElementById(`video${i}`);
+                v.play().then(() => {
+                    v.pause(); // Phát rồi dừng ngay để lấy quyền autoplay
+                    v.muted = true;
+                }).catch(e => console.log("Chờ tương tác thêm..."));
+            }
+            // ---------------------------------------
 
             const currentData = room.data;
             currentData.participants.push({ name: username, role: "Thí sinh", id: currentUser.uid, last_active: Date.now() });
@@ -274,39 +287,40 @@
         };
 
         function listenToRoom(roomId) {
+            let lastStatusTimestamp = 0; // Biến phụ để kiểm tra lệnh mới
+
             supabase.channel(`room_${roomId}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                     const data = payload.new.data;
 
-                    // 1. Cập nhật tên chủ đề và Nạp sẵn Video (Preload)
+                    // 1. Cập nhật dữ liệu video & Preload
                     if (data.round2Videos && data.round2Videos.length > 0) {
                         data.round2Videos.forEach((videoData, i) => {
                             const v = document.getElementById(`video${i}`);
                             const t = document.getElementById(`topic${i}`);
 
-                            // Hiển thị tên chủ đề nếu Host đã cho phép hiện
                             if (data.status.showTopic && data.status.showTopic[i]) {
                                 t.innerText = videoData.topic;
                             }
 
-                            // Nạp URL video nếu chưa có (nạp trước để khi bấm Play là chạy ngay)
                             if (videoData.url && v.getAttribute('data-loaded-url') !== videoData.url) {
                                 v.src = videoData.url;
                                 v.setAttribute('data-loaded-url', videoData.url);
-                                v.load(); // Tải trước dữ liệu video
-                                v.muted = true; // Để mặc định tắt tiếng để chắc chắn trình duyệt cho phép Play
+                                v.load();
                             }
                         });
                     }
 
-                    // 2. Lệnh phát video đồng loạt
-                    if (data.status && data.status.isPlaying === true) {
+                    // 2. Lệnh phát video - Chỉ phát khi có timestamp mới từ Host
+                    if (data.status && data.status.isPlaying === true && data.status.timestamp !== lastStatusTimestamp) {
+                        lastStatusTimestamp = data.status.timestamp;
+
                         for (let i = 0; i < 3; i++) {
                             const v = document.getElementById(`video${i}`);
-                            if (v.src) {
-                                // Trình duyệt yêu cầu trả về một Promise cho .play()
-                                v.play().catch(error => {
-                                    console.error("Autoplay bị chặn, cần tương tác người dùng:", error);
+                            if (v.src && v.paused) { // Chỉ phát nếu đang dừng
+                                v.muted = true; // Bắt buộc muted để đảm bảo 100% tự động chạy được
+                                v.play().catch(err => {
+                                    console.error("Vẫn bị chặn! Cần click vào màn hình một lần nữa.");
                                 });
                             }
                         }
