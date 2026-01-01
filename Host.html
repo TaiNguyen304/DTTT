@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* CSS VẪN GIỮ NGUYÊN */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -32,14 +31,14 @@
             gap: 24px;
         }
 
-        .grid-3 {
+        .grid-4 {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
         }
 
         @media (max-width: 768px) {
-            .grid-3 {
+            .grid-4 {
                 grid-template-columns: 1fr;
             }
         }
@@ -116,20 +115,13 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             font-size: 1rem;
-            font-weight: bold;
         }
 
         .btn:hover {
             transform: translateY(-2px);
             filter: brightness(1.1);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
             background-color: orange;
             color: white;
-        }
-
-        .btn:active {
-            transform: translateY(0);
-            filter: brightness(0.95);
         }
 
         .btn-purple {
@@ -148,20 +140,15 @@
         .btn-pink {
             background: #ff00cc;
             height: 80px;
-            font-size: 1.125rem;
         }
 
         .btn-green {
             background: green;
+            height: 80px;
         }
 
         .btn-red {
             background: red;
-        }
-
-        .btn-playing {
-            background: green;
-            box-shadow: 0 0 0 4px #bbf7d0;
         }
 
         .input-group {
@@ -182,13 +169,7 @@
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
             font-weight: bold;
-        }
-
-        .form-input:focus {
-            border-color: #f97316;
         }
 
         .popup-overlay {
@@ -263,7 +244,6 @@
             border-bottom: 1px solid #f1f5f9;
         }
 
-        /* Đã sửa: In đậm các vai trò */
         .role-badge {
             background: #e2e8f0;
             padding: 4px 8px;
@@ -288,42 +268,39 @@
 </head>
 
 <body>
-
     <div class="container">
         <input type="hidden" id="supabaseUrl" value="https://lohkwsuebmgscgmwvyqv.supabase.co">
         <input type="hidden" id="supabaseKey"
             value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2eXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
+
         <div class="card card-header">
             <h1><i class="fa-solid fa-gamepad" style="color: purple;"></i> Host Control Panel</h1>
             <div style="margin-top: 16px;">
                 <div id="statusInfo" class="status-badge">
-                    <span class="status-dot"></span>
-                    Chưa vào phòng
+                    <span class="status-dot"></span> Chưa vào phòng
                 </div>
             </div>
         </div>
 
         <div class="card">
             <div class="section-title">Quản lý phòng</div>
-            <div class="upload-row"> <button onclick="createRoom()" class="btn btn-purple">
-                    <i class="fa-solid fa-plus-circle"></i> Tạo phòng mới
-                </button>
-                <button onclick="openPopup('joinPopup')" class="btn btn-yellow">
-                    <i class="fa-solid fa-user-shield"></i> Tham gia (Quản lý)
-                </button>
-                <button onclick="openListPopup()" class="btn btn-green">
-                    <i class="fa-solid fa-users"></i> Danh sách tham gia
-                </button>
+            <div class="upload-row">
+                <button onclick="createRoom()" class="btn btn-purple"><i class="fa-solid fa-plus-circle"></i> Tạo phòng
+                    mới</button>
+                <button onclick="openPopup('joinPopup')" class="btn btn-yellow"><i class="fa-solid fa-user-shield"></i>
+                    Tham gia (Quản lý)</button>
+                <button onclick="openListPopup()" class="btn btn-green"><i class="fa-solid fa-users"></i> Danh sách tham
+                    gia</button>
             </div>
         </div>
 
         <div class="card">
-            <div class="section-title">Dữ liệu đề thi</div>
+            <div class="section-title">Dữ liệu đề thi (Vòng 2)</div>
             <div class="upload-row">
                 <input type="file" id="excelInput" accept=".xlsx, .xls" style="display: none;"
                     onchange="handleExcelUpload(this)">
                 <button onclick="document.getElementById('excelInput').click()" class="btn btn-blue">
-                    <i class="fa-solid fa-file-excel"></i> Nhập Video từ Excel
+                    <i class="fa-solid fa-file-excel"></i> Nhập video từ excel
                 </button>
                 <span id="uploadStatus" class="upload-msg"></span>
             </div>
@@ -331,16 +308,11 @@
 
         <div class="card">
             <div class="section-title">Điều khiển vòng chơi</div>
-            <div class="grid-3">
-                <button id="btnPlay1" onclick="playRound(1)" class="btn btn-pink">
-                    <i class="fa-solid fa-play"></i> Vòng 1
-                </button>
-                <button id="btnPlay2" onclick="playRound(2)" class="btn btn-pink">
-                    <i class="fa-solid fa-play"></i> Vòng 2
-                </button>
-                <button id="btnPlay3" onclick="playRound(3)" class="btn btn-pink">
-                    <i class="fa-solid fa-play"></i> Vòng 3
-                </button>
+            <div class="grid-4">
+                <button onclick="toggleTopic(0)" class="btn btn-pink">Hiện chủ đề 1</button>
+                <button onclick="toggleTopic(1)" class="btn btn-pink">Hiện chủ đề 2</button>
+                <button onclick="toggleTopic(2)" class="btn btn-pink">Hiện chủ đề 3</button>
+                <button onclick="startRound2()" class="btn btn-green">Vòng 2</button>
             </div>
         </div>
     </div>
@@ -352,7 +324,7 @@
                 <div class="input-group">
                     <label class="input-label">Mã phòng</label>
                     <input type="text" id="joinRoomCode" placeholder="Nhập 7 số..." class="form-input"
-                        style="text-align: center; letter-spacing: 2px;">
+                        style="text-align: center;">
                 </div>
                 <div class="input-group">
                     <label class="input-label">Tên hiển thị</label>
@@ -371,8 +343,7 @@
         <div class="popup-box">
             <div class="popup-header bg-gradient-blue">Danh sách tham gia</div>
             <div id="participantsList" class="popup-body"
-                style="max-height: 300px; overflow-y: auto; background: #f8fafc;">
-            </div>
+                style="max-height: 300px; overflow-y: auto; background: #f8fafc;"></div>
             <div class="popup-footer">
                 <button onclick="closePopup('listPopup')" class="btn btn-red" style="width: 100%;">Đóng</button>
             </div>
@@ -396,349 +367,125 @@
 
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value;
-
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         let currentUser = { uid: "host-" + Math.random().toString(36).substring(2, 9) };
         let currentRoomId = null;
         let roomSubscription = null;
-        let heartbeatInterval = null;
-        let cleanupInterval = null;
 
-        // --- CÁC HÀM HEARTBEAT VÀ CLEANUP (ĐÃ TỐI ƯU HÓA CỰC ĐỘ) ---
-
-        // Chức năng 1: Gửi nhịp tim của bản thân Host/Manager (1 giây)
-        function startHeartbeat(roomId, uid) {
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-
-            const updateActiveStatus = async () => {
-                if (!roomId) return;
-                try {
-                    const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
-                    if (!room || !room.data || !room.data.participants) return;
-
-                    let updated = false;
-                    const newParticipants = room.data.participants.map(p => {
-                        if (p.id === uid) {
-                            updated = true;
-                            // Cập nhật timestamp
-                            return { ...p, last_active: Date.now() };
-                        }
-                        return p;
-                    });
-
-                    if (updated) {
-                        await supabase.from('rooms').update({
-                            data: { ...room.data, participants: newParticipants }
-                        }).eq('id', roomId);
-                    }
-                } catch (e) {
-                    console.error("Host Heartbeat error:", e.message);
-                }
-            };
-
-            updateActiveStatus();
-            // Cập nhật: Tần suất Heartbeat là 1 giây
-            heartbeatInterval = setInterval(updateActiveStatus, 1000);
-        }
-
-        // Chức năng 2: Dọn dẹp người dùng không hoạt động (Chỉ Host mới chạy)
-        function startCleanup(roomId) {
-            if (cleanupInterval) clearInterval(cleanupInterval);
-
-            const cleanupInactiveUsers = async () => {
-                if (!roomId) return;
-                const now = Date.now();
-                // Ngưỡng không hoạt động: 6 giây (6000ms)
-                const threshold = 6000;
-
-                try {
-                    const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
-                    if (!room || !room.data) return;
-
-                    const currentParticipants = room.data.participants || [];
-
-                    const activeParticipants = currentParticipants.filter(p =>
-                        p.role === "Host" ||
-                        (p.last_active && (now - p.last_active < threshold))
-                    );
-
-                    if (activeParticipants.length < currentParticipants.length) {
-                        console.log(`[CLEANUP SUCCESS] Removing ${currentParticipants.length - activeParticipants.length} inactive user(s).`);
-
-                        await supabase.from('rooms').update({
-                            data: { ...room.data, participants: activeParticipants }
-                        }).eq('id', roomId);
-                    }
-                } catch (e) {
-                    console.error("Cleanup error:", e.message);
-                }
-            };
-
-            // Cập nhật: Chạy dọn dẹp mỗi 1 giây
-            cleanupInterval = setInterval(cleanupInactiveUsers, 1000);
-        }
-
-        // --- HÀM XỬ LÝ RỜI PHÒNG THÔNG THƯỜNG ---
-        const handleLeaveRoom = async () => {
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-            if (cleanupInterval) clearInterval(cleanupInterval);
-            if (!currentRoomId) return;
-
-            const { data: room, error } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
-            if (room && room.data && room.data.participants) {
-                const newParticipants = room.data.participants.filter(p => p.id !== currentUser.uid);
-                await supabase.from('rooms').update({
-                    data: { ...room.data, participants: newParticipants }
-                }).eq('id', currentRoomId);
+        // Chuyển link Google Drive sang link trực tiếp
+        function formatDriveLink(url) {
+            if (url && url.includes('drive.google.com')) {
+                const id = url.split('/d/')[1]?.split('/')[0] || url.split('id=')[1]?.split('&')[0];
+                return id ? `https://drive.google.com/uc?export=download&id=${id}` : url;
             }
-        };
-
-        window.addEventListener('beforeunload', handleLeaveRoom);
-        window.addEventListener('pagehide', handleLeaveRoom);
-        // ----------------------------------------------------
+            return url;
+        }
 
         window.createRoom = async () => {
             const roomId = Math.floor(1000000 + Math.random() * 9000000).toString();
-            currentUser.uid = "host-" + Math.random().toString(36).substring(2, 9);
-
             const initialData = {
                 hostId: currentUser.uid,
-                // THÊM last_active khi tạo phòng
                 participants: [{ name: "Host", role: "Host", id: currentUser.uid, last_active: Date.now() }],
-                round1Video: "", round2Videos: [], round3Video: "",
-                status: { round: 0, isPlaying: false, timestamp: Date.now(), videoIndex: 0 } // Thêm videoIndex
+                round2Videos: [],
+                status: { isPlaying: false, showTopic: [false, false, false], timestamp: Date.now() }
             };
-
-            try {
-                const { error } = await supabase.from('rooms').insert([{ id: roomId, data: initialData }]);
-                if (error) throw error;
-                currentRoomId = roomId;
-                updateUIJoined(roomId, "Host");
-                showMessage(`Đã tạo phòng thành công!\nMã: ${roomId}`);
-
-                // BẮT ĐẦU HEARTBEAT VÀ CLEANUP
-                startHeartbeat(currentRoomId, currentUser.uid);
-                startCleanup(currentRoomId);
-
-                listenToRoom(roomId);
-            } catch (e) { showMessage("Lỗi tạo phòng: " + e.message); }
+            const { error } = await supabase.from('rooms').insert([{ id: roomId, data: initialData }]);
+            if (error) return showMessage("Lỗi tạo phòng: " + error.message);
+            currentRoomId = roomId;
+            updateUIJoined(roomId, "Host");
+            listenToRoom(roomId);
+            showMessage(`Đã tạo phòng thành công!\nMã: ${roomId}`);
         };
 
         window.confirmJoinManager = async () => {
             const roomId = document.getElementById('joinRoomCode').value;
             const username = document.getElementById('joinUsername').value;
-            if (!roomId || roomId.length !== 7) return showMessage("Mã phòng không hợp lệ");
-            if (!username) return showMessage("Vui lòng nhập tên");
+            const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
+            if (!room) return showMessage("Phòng không tồn tại");
 
-            try {
-                const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', roomId).single();
-                if (fetchError || !room) return showMessage("Phòng không tồn tại");
+            const currentData = room.data;
+            currentUser.uid = "manager-" + Math.random().toString(36).substring(2, 9);
+            currentData.participants.push({ name: username, role: "Quản lý", id: currentUser.uid, last_active: Date.now() });
 
-                const currentData = room.data;
-                if (currentData.participants.some(p => p.name === username && (p.role === "Quản lý" || p.role === "Host"))) return showMessage("Tên Quản lý/Host đã tồn tại");
-
-                currentUser.uid = "manager-" + Math.random().toString(36).substring(2, 9);
-                // THÊM last_active khi tham gia
-                const newParticipant = { name: username, role: "Quản lý", id: currentUser.uid, last_active: Date.now() };
-                if (!currentData.participants) currentData.participants = [];
-                currentData.participants.push(newParticipant);
-
-                const { error: updateError } = await supabase.from('rooms')
-                    .update({ data: currentData })
-                    .eq('id', roomId);
-
-                if (updateError) throw updateError;
-                currentRoomId = roomId;
-                closePopup('joinPopup');
-                updateUIJoined(roomId, "Quản lý");
-                showMessage("Đăng nhập quản lý thành công!");
-
-                // BẮT ĐẦU HEARTBEAT
-                startHeartbeat(currentRoomId, currentUser.uid);
-
-                listenToRoom(roomId);
-            } catch (e) { showMessage("Lỗi: " + e.message); }
+            await supabase.from('rooms').update({ data: currentData }).eq('id', roomId);
+            currentRoomId = roomId;
+            closePopup('joinPopup');
+            updateUIJoined(roomId, "Quản lý");
+            listenToRoom(roomId);
         };
-
-        // --- CÁC HÀM KHÁC ---
-
-        function listenToRoom(roomId) {
-            if (roomSubscription) supabase.removeChannel(roomSubscription);
-
-            (async () => {
-                const { data, error } = await supabase.from('rooms').select('data').eq('id', roomId).single();
-                if (data) {
-                    const roomData = data.data;
-                    updateParticipantsList(roomData.participants);
-                    updateRoundUI(roomData.status);
-                } else if (error) {
-                    showMessage("Lỗi kết nối Realtime: " + error.message);
-                }
-            })();
-
-            roomSubscription = supabase.channel(`room_${roomId}`)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
-                    const roomData = payload.new.data;
-                    updateParticipantsList(roomData.participants);
-                    // Dù có Realtime update, ta vẫn gọi updateRoundUI để đảm bảo đồng bộ
-                    updateRoundUI(roomData.status);
-                })
-                .subscribe();
-        }
 
         window.handleExcelUpload = (input) => {
             if (!currentRoomId) return showMessage("Vui lòng tạo/vào phòng trước");
             const file = input.files[0];
-            if (!file) return;
-
             const reader = new FileReader();
             reader.onload = async (e) => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    let v1Url = "";
-                    if (workbook.Sheets["Vòng 1"]) v1Url = workbook.Sheets["Vòng 1"]['A2']?.v || "";
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets["Vòng 2"];
+                if (!sheet) return showMessage("Không tìm thấy tab 'Vòng 2'");
 
-                    let v2List = [];
-                    if (workbook.Sheets["Vòng 2"]) {
-                        const s2 = workbook.Sheets["Vòng 2"];
-                        for (let i = 2; i <= 4; i++) {
-                            const topic = s2[`A${i}`]?.v || `Video ${i - 1}`;
-                            const url = s2[`B${i}`]?.v || "";
-                            if (url) v2List.push({ topic, url });
-                        }
+                let v2List = [];
+                for (let i = 2; i <= 4; i++) {
+                    const topic = sheet[`A${i}`]?.v || "";
+                    const url = sheet[`B${i}`]?.v || "";
+                    if (url && url.includes("drive.google.com")) {
+                        v2List.push({ topic, url: formatDriveLink(url) });
                     }
-                    let v3Url = "";
-                    if (workbook.Sheets["Vòng 3"]) v3Url = workbook.Sheets["Vòng 3"]['A2']?.v || "";
+                }
 
-                    const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
-                    if (fetchError || !room) throw new Error("Không tìm thấy phòng để cập nhật");
+                const { data: room } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+                const updatedData = { ...room.data, round2Videos: v2List };
+                await supabase.from('rooms').update({ data: updatedData }).eq('id', currentRoomId);
 
-                    const updatedData = {
-                        ...room.data,
-                        round1Video: v1Url,
-                        round2Videos: v2List,
-                        round3Video: v3Url
-                    };
-
-                    const { error: updateError } = await supabase.from('rooms')
-                        .update({ data: updatedData })
-                        .eq('id', currentRoomId);
-
-                    if (updateError) throw updateError;
-                    document.getElementById('uploadStatus').innerText = "Đã tải lên!";
-                    setTimeout(() => document.getElementById('uploadStatus').innerText = "", 3000);
-                    showMessage("Nhập dữ liệu thành công!");
-                } catch (err) { showMessage("Lỗi file Excel hoặc cập nhật DB: " + err.message); }
+                document.getElementById('uploadStatus').innerText = "Đã tải video Vòng 2!";
+                showMessage("Nhập dữ liệu thành công!");
             };
             reader.readAsArrayBuffer(file);
         };
 
-        // --- HÀM SỬA ĐỔI: playRound (Cập nhật giao diện ngay lập tức) ---
-        window.playRound = async (roundNum) => {
-            if (!currentRoomId) return showMessage("Chưa vào phòng");
-
-            // 1. Fetch current room data
-            const { data: room, error: fetchError } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
-            if (fetchError || !room) return showMessage("Lỗi: Không tìm thấy phòng.");
-
-            const currentStatus = room.data.status || { round: 0, isPlaying: false, timestamp: Date.now() };
-
-            let status;
-
-            // Kiểm tra: Nếu đang phát đúng vòng này -> Tắt
-            if (currentStatus.round === roundNum && currentStatus.isPlaying) {
-                // Tắt video: Chuyển sang trạng thái Dừng (isPlaying = false). Màu: ff00cc.
-                status = { round: roundNum, isPlaying: false, timestamp: Date.now(), videoIndex: currentStatus.videoIndex };
-            } else {
-                // Phát video: Chuyển sang trạng thái Phát (isPlaying = true). Màu: green.
-                // Nếu đang phát vòng khác, nó sẽ tự động bị reset bởi updateRoundUI.
-                status = { round: roundNum, isPlaying: true, timestamp: Date.now(), videoIndex: currentStatus.videoIndex };
-            }
-
-            const updatedData = { ...room.data, status: status };
-
-            // *** BƯỚC MỚI: Cập nhật giao diện Host NGAY LẬP TỨC (trước khi update DB) ***
-            updateRoundUI(status);
-
-            // 2. Update DB
-            const { error: updateError } = await supabase.from('rooms')
-                .update({ data: updatedData })
-                .eq('id', currentRoomId);
-            if (updateError) return showMessage("Lỗi điều khiển vòng chơi: " + updateError.message);
+        window.toggleTopic = async (index) => {
+            if (!currentRoomId) return;
+            const { data: room } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+            let showTopic = room.data.status.showTopic || [false, false, false];
+            showTopic[index] = true;
+            const updatedData = { ...room.data, status: { ...room.data.status, showTopic } };
+            await supabase.from('rooms').update({ data: updatedData }).eq('id', currentRoomId);
         };
-        // -------------------------------------------------------------------------
 
-        function updateRoundUI(status) {
-            if (status) {
-                resetPlayButtons(); // Đặt tất cả về btn-pink (màu ff00cc)
+        window.startRound2 = async () => {
+            if (!currentRoomId) return;
+            const { data: room } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
+            const updatedData = { ...room.data, status: { ...room.data.status, isPlaying: true, timestamp: Date.now() } };
+            await supabase.from('rooms').update({ data: updatedData }).eq('id', currentRoomId);
+            showMessage("Đã phát lệnh Vòng 2!");
+        };
 
-                // Nếu có vòng được chọn (dù đang phát hay đã dừng)
-                if (status.round > 0) {
-                    const btn = document.getElementById(`btnPlay${status.round}`);
-                    if (btn) {
-                        if (status.isPlaying) {
-                            // Đang phát: Màu green
-                            btn.className = "btn btn-playing";
-                            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang phát Vòng ${status.round}`;
-                        } else {
-                            // Đã dừng: Màu ff00cc (Đã được resetPlayButtons đặt) - Chỉ cần cập nhật text
-                            btn.className = "btn btn-pink"; // Giữ nguyên btn-pink
-                            btn.innerHTML = `<i class="fa-solid fa-play"></i> Vòng ${status.round} (Dừng)`;
-                        }
-                    }
-                }
-            }
+        function listenToRoom(roomId) {
+            roomSubscription = supabase.channel(`room_${roomId}`)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
+                    updateParticipantsList(payload.new.data.participants);
+                }).subscribe();
         }
 
         function updateParticipantsList(list) {
             const container = document.getElementById('participantsList');
-            container.innerHTML = "";
-            if (!list || list.length === 0) {
-                container.innerHTML = "<div style='padding:10px; text-align:center'>Chưa có ai tham gia</div>";
-                return;
-            }
-            list.forEach(p => {
-                const div = document.createElement('div');
-                div.className = "list-item";
-                let icon = "fa-user";
-                let color = "#475569";
-                if (p.role === "Host") { icon = "fa-crown"; color = "#7c3aed"; }
-                else if (p.role === "Quản lý") { icon = "fa-user-shield"; color = "#ea580c"; }
-                else if (p.role === "Thí sinh") { icon = "fa-user-astronaut"; color = "#22c55e"; }
-
-                div.innerHTML = `
-                <span style="font-weight: bold; color: ${color};"><i class="fa-solid ${icon}" style="margin-right: 8px;"></i>${p.name}</span>
-                <span class="role-badge">${p.role}</span>
-            `;
-                container.appendChild(div);
-            });
-        }
-
-        function resetPlayButtons() {
-            [1, 2, 3].forEach(i => {
-                const btn = document.getElementById(`btnPlay${i}`);
-                btn.className = "btn btn-pink";
-                btn.innerHTML = `<i class="fa-solid fa-play"></i> Vòng ${i}`;
-            });
+            container.innerHTML = list.map(p => `
+                <div class="list-item">
+                    <span style="font-weight: bold;"><i class="fa-solid fa-user"></i> ${p.name}</span>
+                    <span class="role-badge">${p.role}</span>
+                </div>
+            `).join('');
         }
 
         function updateUIJoined(roomId, role) {
-            const statusEl = document.getElementById('statusInfo');
-            statusEl.style.border = "1px solid #c7d2fe";
-            statusEl.style.color = "#4338ca";
-            statusEl.innerHTML = `<i class="fa-solid fa-wifi" style="color:#22c55e;"></i> Phòng: ${roomId} | ${role}`;
+            document.getElementById('statusInfo').innerHTML = `<i class="fa-solid fa-wifi" style="color:green;"></i> Phòng: ${roomId} | ${role}`;
         }
 
         window.openPopup = (id) => document.getElementById(id).style.display = 'flex';
         window.closePopup = (id) => document.getElementById(id).style.display = 'none';
-        window.openListPopup = () => { if (!currentRoomId) return showMessage("Chưa có phòng"); openPopup('listPopup'); }
-        window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); }
-
-        document.addEventListener("contextmenu", function (e) {
-            e.preventDefault();
-        });
+        window.openListPopup = () => { if (currentRoomId) openPopup('listPopup'); };
+        window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); };
     </script>
 </body>
 

@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* CSS ĐÃ CẬP NHẬT */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -16,7 +15,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: white;
             color: black;
             min-height: 100vh;
@@ -29,7 +28,6 @@
 
         .login-card {
             background: white;
-            color: #1f2937;
             width: 100%;
             max-width: 450px;
             padding: 32px;
@@ -38,99 +36,26 @@
             text-align: center;
         }
 
-        .login-header {
-            margin-bottom: 24px;
-        }
-
-        .login-icon {
-            width: 64px;
-            height: 64px;
-            background: #e0e7ff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 16px auto;
-        }
-
-        .login-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: #111827;
-        }
-
-        .login-subtitle {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-top: 8px;
-            font-weight: bold;
-        }
-
-        .input-wrapper {
-            position: relative;
-            margin-bottom: 16px;
-            width: 100%;
-        }
-
-        .input-icon {
-            position: absolute;
-            top: 50%;
-            left: 12px;
-            transform: translateY(-50%);
-            color: #9ca3af;
-            font-size: 1.1rem;
-            pointer-events: none;
-        }
-
         .form-control {
             width: 100%;
-            padding: 14px 16px 14px 44px;
+            padding: 14px;
             border: 1px solid #d1d5db;
             border-radius: 8px;
             font-size: 1rem;
             font-weight: bold;
-            color: #111827;
+            margin-bottom: 16px;
             outline: none;
-            transition: all 0.2s;
-            background: #fff;
-        }
-
-        .form-control:focus {
-            border-color: purple;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-        }
-
-        .form-control::placeholder {
-            color: #9ca3af;
-            font-weight: bold;
         }
 
         .btn {
             border: none;
             cursor: pointer;
             border-radius: 8px;
-            padding: 12px 16px;
+            padding: 12px;
             font-weight: bold;
             font-size: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: transform 0.2s, filter 0.2s;
             width: 100%;
-        }
-
-        /* Hover chung: Chuyển sang màu orange, chữ trắng đậm */
-        .btn:hover {
-            filter: brightness(1.1);
-            transform: translateY(-1px);
-            background-color: orange;
-            color: white !important;
-        }
-
-        .btn:active {
-            transform: scale(0.98);
+            transition: all 0.2s;
         }
 
         .btn-primary {
@@ -138,91 +63,16 @@
             color: white;
         }
 
-        /* --- CẬP NHẬT NÚT VÒNG (ROUND BUTTONS) --- */
-        /* Mặc định: Màu red, chữ đậm trắng */
-        .btn-round-default {
-            background-color: red;
-            color: white;
-            font-weight: bold;
-        }
-
-        /* Trạng thái được chọn: Màu ff00cc, chữ đậm trắng */
-        .btn-active-round {
-            background-color: #ff00cc;
-            color: white;
-            box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.4);
-            font-weight: bold;
-        }
-
-        /* Trạng thái đang phát: Màu green, chữ đậm trắng */
-        .btn-playing {
-            background-color: green;
-            color: white;
-            font-weight: bold;
-        }
-
-        /* Cập nhật hover cho các nút vòng */
-        .btn-round-default:hover,
-        .btn-active-round:hover,
-        .btn-playing:hover {
+        .btn:hover {
             background-color: orange;
             color: white;
         }
-
-        /* ------------------------------------------- */
-
-
-        /* CSS cho nút Tỉ lệ (mới) - Màu vàng */
-        .btn-yellow {
-            background-color: yellow;
-            color: black;
-            font-weight: bold;
-        }
-
-        /* Nút trong Popup */
-        .btn-popup-success {
-            background-color: green;
-            color: white;
-            font-weight: bold;
-        }
-
-        .btn-popup-danger {
-            background-color: red;
-            color: white;
-            font-weight: bold;
-        }
-
-        /* --- CẬP NHẬT NÚT VIDEO (VIDEO BUTTONS) --- */
-        /* Mặc định: Màu blue, chữ đậm trắng */
-        .btn-video {
-            background-color: blue;
-            color: white;
-            font-weight: bold;
-        }
-
-        /* Được chọn: Màu green, chữ đậm trắng */
-        .btn-video-selected {
-            background-color: green;
-            color: white;
-            font-weight: bold;
-        }
-
-        /* Cập nhật hover cho nút Video (Giữ nguyên orange, chữ trắng) */
-        .btn-video:hover,
-        .btn-video-selected:hover {
-            background-color: orange;
-            color: white;
-        }
-
-        /* ------------------------------------------- */
-
 
         #mainSection {
             width: 100%;
-            max-width: 1024px;
+            max-width: 1200px;
             display: none;
             flex-direction: column;
-            align-items: center;
         }
 
         .info-bar {
@@ -231,100 +81,78 @@
             color: white;
             padding: 16px;
             border-radius: 12px;
-            border: 1px solid #374151;
             display: flex;
             justify-content: space-between;
-            align-items: center;
             margin-bottom: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
         }
 
-        .room-tag {
-            color: white;
-            font-family: monospace;
-            font-size: 1.25rem;
-            font-weight: bold;
-            margin-left: 8px;
-        }
-
-        /* Grid cho hàng nút Video (Video 1, 2, 3 + Tỉ lệ) = 4 cột */
-        .video-controls-row {
+        /* 3 Khung hình */
+        .video-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            width: 100%;
-            max-width: 800px;
-            margin-bottom: 12px;
-        }
-
-        /* Grid riêng cho hàng nút Vòng (3 cột) */
-        #roundControlsRow {
             grid-template-columns: repeat(3, 1fr);
-            max-width: 600px;
+            gap: 15px;
+            width: 100%;
         }
 
-        .video-wrapper {
-            width: 100%;
-            background: black;
-            border-radius: 12px;
-            border: 1px solid #374151;
+        .video-container {
             position: relative;
+            background: #000;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 20px 25px -5p x rgba(0, 0, 0, 0.5);
-            margin-top: 12px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            aspect-ratio: 16/9;
+        }
+
+        .video-container.active {
+            border-color: lime;
+        }
+
+        .topic-label {
+            background: #333;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            min-height: 40px;
         }
 
         video {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
         }
 
-        .overlay-controls {
+        /* Lớp che màu đỏ */
+        .red-overlay {
             position: absolute;
-            top: 16px;
-            right: 16px;
-            display: flex;
-            gap: 8px;
-            opacity: 0.7;
-            transition: opacity 0.3s;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: red;
             z-index: 10;
+            display: none;
+            align-items: center;
+            justify-content: center;
         }
 
-        .video-wrapper:hover .overlay-controls {
-            opacity: 1;
+        .video-container.masked .red-overlay {
+            display: flex;
         }
 
-        .btn-overlay {
+        .mute-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 20;
             background: red;
             color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: none;
             padding: 6px 12px;
-            font-size: 0.8rem;
-            border-radius: 6px;
-            cursor: pointer;
-            backdrop-filter: blur(4px);
+            border-radius: 4px;
             font-weight: bold;
-        }
-
-        .btn-overlay:hover {
-            background: orange;
-        }
-
-        .aspect-16-9 {
-            aspect-ratio: 16/9;
-        }
-
-        .aspect-9-16 {
-            aspect-ratio: 9/16;
-        }
-
-        .aspect-4-3 {
-            aspect-ratio: 4/3;
-        }
-
-        .aspect-3-4 {
-            aspect-ratio: 3/4;
+            cursor: pointer;
         }
 
         .popup-overlay {
@@ -342,32 +170,10 @@
 
         .popup-card {
             background: white;
-            color: #1f2937;
             padding: 24px;
             border-radius: 16px;
             width: 320px;
             text-align: center;
-        }
-
-        .radio-option {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-
-        .radio-option:hover {
-            background: #f3f4f6;
-        }
-
-        .popup-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
         }
     </style>
 </head>
@@ -378,419 +184,125 @@
         value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaGt3c3VlYm1nc2NnbXd2eXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzk0MzksImV4cCI6MjA3OTg1NTQzOX0.D5ZNvCsqTZRXu0EpkM8BiIvX2V-PzjK0uVur6KERfhk">
 
     <div id="loginSection" class="login-card">
-        <div class="login-header">
-            <div class="login-icon">
-                <i class="fa-solid fa-user-astronaut" style="font-size: 32px; color: purple; font-weight: bold;"></i>
-            </div>
-            <h1 class="login-title">Đăng nhập Thí sinh</h1>
-            <p class="login-subtitle">Nhập thông tin phòng thi để bắt đầu</p>
-        </div>
-
-        <div class="input-wrapper">
-            <i class="fa-solid fa-hashtag input-icon"></i>
-            <input type="text" id="loginRoom" placeholder="Mã phòng" class="form-control">
-        </div>
-
-        <div class="input-wrapper">
-            <i class="fa-regular fa-user input-icon"></i>
-            <input type="text" id="loginUser" placeholder="Tên hiển thị" class="form-control">
-        </div>
-
-        <button onclick="joinRoom()" class="btn btn-primary" style="margin-top: 8px;">
-            Xác nhận tham gia <i class="fa-solid fa-arrow-right"></i>
-        </button>
+        <h1 style="margin-bottom: 20px;">Đăng nhập Thí sinh</h1>
+        <input type="text" id="loginRoom" placeholder="Mã phòng" class="form-control">
+        <input type="text" id="loginUser" placeholder="Tên hiển thị" class="form-control">
+        <button onclick="joinRoom()" class="btn btn-primary">Tham gia</button>
     </div>
 
     <div id="mainSection">
         <div class="info-bar">
-            <div style="display: flex; align-items: center;">
-                <div
-                    style="width: 10px; height: 10px; background: green; border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px #22c55e;">
-                </div>
-                <span style="color: #9ca3af; font-weight: bold; font-size: 0.9rem;">PHÒNG:</span>
-                <span id="displayRoomId" class="room-tag">---</span>
+            <span>PHÒNG: <b id="displayRoomId">---</b></span>
+            <span id="displayUser">---</span>
+        </div>
+
+        <div class="video-grid">
+            <div id="wrapper0" class="video-container" onclick="focusVideo(0)">
+                <div id="topic0" class="topic-label">Đang chờ...</div>
+                <video id="video0" playsinline></video>
+                <div class="red-overlay"></div>
+                <button onclick="toggleMute(0, event)" id="mute0" class="mute-btn">TẮT TIẾNG</button>
             </div>
-            <div>
-                <i class="fa-solid fa-user" style="color: #818cf8; margin-right: 6px;"></i>
-                <span id="displayUser" style="font-weight: bold; color: white;">---</span>
+            <div id="wrapper1" class="video-container" onclick="focusVideo(1)">
+                <div id="topic1" class="topic-label">Đang chờ...</div>
+                <video id="video1" playsinline></video>
+                <div class="red-overlay"></div>
+                <button onclick="toggleMute(1, event)" id="mute1" class="mute-btn">TẮT TIẾNG</button>
             </div>
-        </div>
-
-        <div class="video-controls-row" id="roundControlsRow">
-            <button id="btnRound1" onclick="selectRound(1)" class="btn btn-round-default">Vòng 1</button>
-            <button id="btnRound2" onclick="selectRound(2)" class="btn btn-round-default">Vòng 2</button>
-            <button id="btnRound3" onclick="selectRound(3)" class="btn btn-round-default">Vòng 3</button>
-        </div>
-
-        <div class="video-controls-row" id="videoControlsRow2">
-            <button id="btnVidIndex0" onclick="selectVideoIndex(0)" class="btn btn-video">Video 1</button>
-            <button id="btnVidIndex1" onclick="selectVideoIndex(1)" class="btn btn-video">Video 2</button>
-            <button id="btnVidIndex2" onclick="selectVideoIndex(2)" class="btn btn-video">Video 3</button>
-            <button id="btnRatio" onclick="openPopup('ratioPopup')" class="btn btn-yellow">
-                <i class="fa-solid fa-expand"></i> Tỉ lệ
-            </button>
-        </div>
-
-        <div id="videoWrapper" class="video-wrapper aspect-16-9">
-            <video id="mainVideo" playsinline></video>
-            <div class="overlay-controls">
-                <button onclick="toggleMute()" id="btnMute" class="btn-overlay">
-                    <i class="fa-solid fa-volume-high"></i> Tắt/Bật
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="ratioPopup" class="popup-overlay">
-        <div class="popup-card">
-            <h3 style="font-size: 1.2rem; font-weight: bold; margin-bottom: 16px;">Chọn tỉ lệ khung hình</h3>
-            <label class="radio-option">
-                <b>16:9</b> <input type="radio" name="ratio" value="16-9" checked>
-            </label>
-            <label class="radio-option">
-                <b>9:16</b> <input type="radio" name="ratio" value="9-16">
-            </label>
-            <label class="radio-option">
-                <b>4:3</b> <input type="radio" name="ratio" value="4-3">
-            </label>
-            <div class="popup-actions">
-                <button onclick="saveRatio()" class="btn btn-popup-success">Áp dụng</button>
-                <button onclick="closePopup('ratioPopup')" class="btn btn-popup-danger">Đóng</button>
+            <div id="wrapper2" class="video-container" onclick="focusVideo(2)">
+                <div id="topic2" class="topic-label">Đang chờ...</div>
+                <video id="video2" playsinline></video>
+                <div class="red-overlay"></div>
+                <button onclick="toggleMute(2, event)" id="mute2" class="mute-btn">TẮT TIẾNG</button>
             </div>
         </div>
     </div>
 
     <div id="msgPopup" class="popup-overlay">
         <div class="popup-card">
-            <i class="fa-solid fa-circle-exclamation" style="font-size: 40px; color: red; margin-bottom: 16px;"></i>
             <p id="msgContent" style="font-weight: bold; margin-bottom: 24px;"></p>
-            <button onclick="closePopup('msgPopup')" class="btn btn-popup-danger">Đóng</button>
+            <button onclick="closePopup('msgPopup')" class="btn btn-primary">Đóng</button>
         </div>
     </div>
 
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
 
-        // 1. KẾT NỐI SUPABASE & KHAI BÁO BIẾN TOÀN CỤC
         const supabaseUrl = document.getElementById('supabaseUrl').value;
         const supabaseKey = document.getElementById('supabaseKey').value;
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         let currentUser = { uid: "contestant-" + Math.random().toString(36).substring(2, 9) };
         let currentRoomId = null;
-        let currentRoomData = null; // <-- QUAN TRỌNG: Lưu dữ liệu phòng, bao gồm link video
-        let roomSubscription = null;
-        let heartbeatInterval = null;
-        let currentRound = 0; // <-- Theo dõi vòng đang được chọn/phát
 
-        // --- CÁC HÀM XỬ LÝ GIAO DIỆN VÀ ĐIỀU KHIỂN NÚT BẤM ---
-
-        // Hàm phụ: Hiển thị thông báo
-        window.openPopup = (id) => document.getElementById(id).style.display = 'flex';
-        window.closePopup = (id) => document.getElementById(id).style.display = 'none';
-        window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; openPopup('msgPopup'); }
-
-        // Hàm phụ: Phát video
-        function playVideo(url) {
-            const video = document.getElementById('mainVideo');
-            if (url) {
-                video.src = url;
-                video.load();
-                // Bắt buộc phải có tương tác của người dùng để Play, nên thêm .catch
-                video.play().catch(e => console.log("Tự động phát bị chặn (Autoplay Blocked)."));
-            } else {
-                video.src = '';
-                video.pause();
-            }
-        }
-
-        // Hàm phụ: Reset màu các nút video con
-        function resetVideoButtons() {
-            [0, 1, 2].forEach(i => {
-                const btn = document.getElementById(`btnVidIndex${i}`);
-                btn.classList.remove('btn-video-selected');
-                btn.classList.add('btn-video');
-            });
-        }
-
-        // Hàm phụ: Cập nhật màu nút Vòng (được gọi từ selectRound và lắng nghe Realtime)
-        function updateRoundButtonColor(roundNum, currentData) {
-            const btn = document.getElementById(`btnRound${roundNum}`);
-
-            // Xóa hết các class màu cũ
-            btn.classList.remove('btn-active-round', 'btn-playing', 'btn-round-default');
-
-            const isSelected = (roundNum === currentRound);
-            const isPlaying = isSelected && currentData && currentData.status && currentData.status.isPlaying;
-
-            if (isPlaying) {
-                // Đang phát: Màu green
-                btn.classList.add('btn-playing');
-            } else if (isSelected) {
-                // Được chọn (không phát/hết): Màu ff00cc
-                btn.classList.add('btn-active-round');
-            } else {
-                // Không được chọn: Màu red
-                btn.classList.add('btn-round-default');
-            }
-        }
-
-        // 1. NÚT VÒNG 1 / VÒNG 2 / VÒNG 3 (ĐÃ SỬA ĐỔI LOGIC)
-        window.selectRound = (roundNum) => {
-            if (!currentRoomData) return showMessage("Vui lòng tham gia phòng trước.");
-
-            // 1. Cập nhật trạng thái vòng đang được chọn
-            currentRound = roundNum;
-
-            // 2. Cập nhật giao diện nút bấm TRƯỚC (Đảm bảo nút được chọn có màu ff00cc/green)
-            [1, 2, 3].forEach(i => {
-                updateRoundButtonColor(i, currentRoomData); // Cập nhật màu cho tất cả 3 nút
-            });
-
-            // 3. Reset nút Video 1/2/3 và dừng video hiện tại
-            resetVideoButtons();
-            playVideo(null); // Dừng video nếu đang chạy
-
-            // 4. Xử lý logic phát video dựa trên dữ liệu (Nếu không có video, chỉ hiện thông báo)
-            if (roundNum === 1) {
-                if (currentRoomData.round1Video) {
-                    playVideo(currentRoomData.round1Video);
-                } else {
-                    showMessage("Chưa có Video Vòng 1.");
-                }
-            } else if (roundNum === 3) {
-                if (currentRoomData.round3Video) {
-                    playVideo(currentRoomData.round3Video);
-                } else {
-                    showMessage("Chưa có Video Vòng 3.");
-                }
-            } else if (roundNum === 2) {
-                // Vòng 2: Phải chọn Video con
-                showMessage("Vòng 2: Vui lòng chọn Video 1, 2 hoặc 3 ở bên dưới.");
-            }
-        };
-
-        // 2. NÚT VIDEO 1 / VIDEO 2 / VIDEO 3 (Chỉ hoạt động cho Vòng 2)
-        window.selectVideoIndex = (index) => {
-            if (currentRound !== 2) return showMessage("Vui lòng chọn Vòng 2 trước.");
-            if (!currentRoomData || !currentRoomData.round2Videos) return showMessage("Dữ liệu Vòng 2 chưa được Host tải lên.");
-
-            // Cập nhật giao diện nút (Sử dụng class CSS: btn-video-selected)
-            [0, 1, 2].forEach(i => {
-                const btn = document.getElementById(`btnVidIndex${i}`);
-                if (i === index) {
-                    btn.classList.add('btn-video-selected');
-                    btn.classList.remove('btn-video');
-                } else {
-                    btn.classList.remove('btn-video-selected');
-                    btn.classList.add('btn-video');
-                }
-            });
-
-            // Logic phát video
-            if (currentRoomData.round2Videos[index] && currentRoomData.round2Videos[index].url) {
-                playVideo(currentRoomData.round2Videos[index].url);
-            } else {
-                playVideo(null);
-                showMessage(`Không tìm thấy dữ liệu cho Video ${index + 1}`);
-            }
-        };
-
-        // 3. NÚT TẮT/BẬT TIẾNG
-        window.toggleMute = () => {
-            const video = document.getElementById('mainVideo');
-            video.muted = !video.muted;
-            const btn = document.getElementById('btnMute');
-            if (video.muted) {
-                btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Đã tắt tiếng';
-                btn.style.backgroundColor = 'gray';
-            } else {
-                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Tắt/Bật'; // Quay lại text ban đầu
-                btn.style.backgroundColor = 'red';
-            }
-        };
-
-        // 4. LƯU TỈ LỆ KHUNG HÌNH
-        window.saveRatio = () => {
-            const radios = document.getElementsByName('ratio');
-            let selectedValue = "16-9";
-            for (const radio of radios) {
-                if (radio.checked) {
-                    selectedValue = radio.value;
-                    break;
-                }
-            }
-
-            const wrapper = document.getElementById('videoWrapper');
-            // Xóa các class cũ và thêm class mới
-            wrapper.classList.remove('aspect-16-9', 'aspect-9-16', 'aspect-4-3', 'aspect-3-4');
-            wrapper.classList.add(`aspect-${selectedValue}`);
-
-            closePopup('ratioPopup');
-        };
-
-        // --- CÁC HÀM HỆ THỐNG CỦA THÍ SINH ---
-
-        // Hàm gửi tín hiệu online (Heartbeat) - Dùng lại logic phức tạp của Host để đảm bảo tính nhất quán
-        function startHeartbeat(roomId, uid) {
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-
-            const updateActiveStatus = async () => {
-                if (!roomId) return;
-                try {
-                    const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
-                    if (!room || !room.data || !room.data.participants) return;
-
-                    let updated = false;
-                    const newParticipants = room.data.participants.map(p => {
-                        if (p.id === uid) {
-                            updated = true;
-                            return { ...p, last_active: Date.now() };
-                        }
-                        return p;
-                    });
-
-                    if (updated) {
-                        await supabase.from('rooms').update({
-                            data: { ...room.data, participants: newParticipants }
-                        }).eq('id', roomId);
-                    }
-                } catch (e) {
-                    console.error("Contestant Heartbeat error:", e.message);
-                }
-            };
-
-            updateActiveStatus();
-            // Gửi heartbeat mỗi 3 giây
-            heartbeatInterval = setInterval(updateActiveStatus, 3000);
-        }
-
-        // Hàm xử lý khi rời phòng
-        const handleLeaveRoom = async () => {
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-            if (!currentRoomId) return;
-
-            // Xóa tên thí sinh khỏi danh sách
-            const { data: room } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
-            if (room && room.data && room.data.participants) {
-                const newParticipants = room.data.participants.filter(p => p.id !== currentUser.uid);
-                await supabase.from('rooms').update({
-                    data: { ...room.data, participants: newParticipants }
-                }).eq('id', currentRoomId);
-            }
-        };
-
-        window.addEventListener('beforeunload', handleLeaveRoom);
-        window.addEventListener('pagehide', handleLeaveRoom);
-
-        // Hàm lắng nghe sự kiện Realtime từ Host
-        function listenToRoom(roomId) {
-            if (roomSubscription) supabase.removeChannel(roomSubscription);
-
-            // 1. Lấy dữ liệu lần đầu
-            (async () => {
-                const { data } = await supabase.from('rooms').select('data').eq('id', roomId).single();
-                if (data) {
-                    currentRoomData = data.data; // Gán dữ liệu vào biến toàn cục
-                    // Nếu Host đang phát vòng nào đó, tự động chuyển sang vòng đó
-                    if (data.data.status && data.data.status.round > 0) {
-                        window.selectRound(data.data.status.round);
-                    }
-                }
-            })();
-
-            // 2. Lắng nghe thay đổi
-            roomSubscription = supabase.channel(`room_${roomId}`)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
-                    const newData = payload.new.data;
-                    currentRoomData = newData; // Luôn cập nhật dữ liệu phòng
-
-                    // Nếu Host điều khiển thay đổi Vòng chơi (status)
-                    if (newData.status && newData.status.round !== currentRound) {
-                        window.selectRound(newData.status.round);
-                    } else if (newData.status && newData.status.round === currentRound) {
-                        // Nếu vẫn ở vòng đó, chỉ cần cập nhật trạng thái chơi (green/ff00cc)
-                        updateRoundButtonColor(currentRound, newData);
-                    }
-
-                    // Nếu Host chuyển sang video con của Vòng 2
-                    if (currentRound === 2 && newData.status && newData.status.videoIndex !== undefined) {
-                        window.selectVideoIndex(newData.status.videoIndex);
-                    }
-
-                })
-                .subscribe();
-        }
-
-
-        // 5. HÀM THAM GIA PHÒNG (ĐÃ SỬA LỖI VÀ BỔ SUNG LOGIC)
         window.joinRoom = async () => {
             const roomId = document.getElementById('loginRoom').value;
             const username = document.getElementById('loginUser').value;
+            const { data: room } = await supabase.from('rooms').select('data').eq('id', roomId).single();
+            if (!room) return showMessage("Phòng không tồn tại");
 
-            // 1. Kiểm tra đầu vào
-            if (!roomId) return showMessage("Vui lòng nhập Mã phòng");
-            if (!username) return showMessage("Vui lòng nhập Tên hiển thị");
+            const currentData = room.data;
+            currentData.participants.push({ name: username, role: "Thí sinh", id: currentUser.uid, last_active: Date.now() });
+            await supabase.from('rooms').update({ data: currentData }).eq('id', roomId);
 
-            try {
-                // 2. Lấy dữ liệu phòng từ Supabase
-                const { data: room, error: fetchError } = await supabase
-                    .from('rooms')
-                    .select('data')
-                    .eq('id', roomId)
-                    .single();
+            currentRoomId = roomId;
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('mainSection').style.display = 'flex';
+            document.getElementById('displayRoomId').innerText = roomId;
+            document.getElementById('displayUser').innerText = username;
+            listenToRoom(roomId);
+        };
 
-                if (fetchError || !room) {
-                    return showMessage("Phòng không tồn tại hoặc sai mã!");
+        window.focusVideo = (index) => {
+            for (let i = 0; i < 3; i++) {
+                const el = document.getElementById(`wrapper${i}`);
+                if (i === index) {
+                    el.classList.remove('masked');
+                    el.classList.add('active');
+                } else {
+                    el.classList.add('masked');
+                    el.classList.remove('active');
                 }
-
-                const currentData = room.data;
-                currentRoomData = currentData; // !!! LƯU DỮ LIỆU PHÒNG !!!
-
-                // 3. Tạo thông tin người dùng mới
-                currentUser.uid = "contestant-" + Math.random().toString(36).substring(2, 9);
-
-                const newParticipant = {
-                    name: username,
-                    role: "Thí sinh",
-                    id: currentUser.uid,
-                    last_active: Date.now()
-                };
-
-                // 4. Cập nhật danh sách người tham gia
-                let participants = currentData.participants || [];
-                participants = participants.filter(p => p.id !== currentUser.uid); // Đảm bảo không trùng ID
-                participants.push(newParticipant);
-
-                const { error: updateError } = await supabase
-                    .from('rooms')
-                    .update({
-                        data: { ...currentData, participants: participants }
-                    })
-                    .eq('id', roomId);
-
-                if (updateError) throw updateError;
-
-                // 5. Cập nhật giao diện thành công
-                currentRoomId = roomId;
-                document.getElementById('loginSection').style.display = 'none';
-                document.getElementById('mainSection').style.display = 'flex';
-                document.getElementById('displayRoomId').innerText = roomId;
-                document.getElementById('displayUser').innerText = username;
-
-                // 6. Bắt đầu gửi nhịp tim và lắng nghe sự kiện
-                startHeartbeat(currentRoomId, currentUser.uid);
-                listenToRoom(roomId);
-
-            } catch (e) {
-                console.error(e);
-                showMessage("Lỗi khi tham gia: " + e.message);
             }
         };
 
-        document.addEventListener("contextmenu", function (e) {
-            e.preventDefault();
-        });
+        window.toggleMute = (index, event) => {
+            event.stopPropagation();
+            const v = document.getElementById(`video${index}`);
+            v.muted = !v.muted;
+            document.getElementById(`mute${index}`).innerText = v.muted ? "BẬT TIẾNG" : "TẮT TIẾNG";
+        };
+
+        function listenToRoom(roomId) {
+            supabase.channel(`room_${roomId}`)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
+                    const data = payload.new.data;
+
+                    // Cập nhật chủ đề
+                    if (data.status && data.status.showTopic) {
+                        data.status.showTopic.forEach((show, i) => {
+                            if (show && data.round2Videos[i]) {
+                                document.getElementById(`topic${i}`).innerText = data.round2Videos[i].topic;
+                            }
+                        });
+                    }
+
+                    // Phát video đồng loạt
+                    if (data.status && data.status.isPlaying) {
+                        for (let i = 0; i < 3; i++) {
+                            const v = document.getElementById(`video${i}`);
+                            if (!v.src && data.round2Videos[i]) {
+                                v.src = data.round2Videos[i].url;
+                                v.load();
+                            }
+                            v.play().catch(() => { });
+                        }
+                    }
+                }).subscribe();
+        }
+
+        window.closePopup = (id) => document.getElementById(id).style.display = 'none';
+        window.showMessage = (msg) => { document.getElementById('msgContent').innerText = msg; document.getElementById('msgPopup').style.display = 'flex'; };
     </script>
 </body>
 
