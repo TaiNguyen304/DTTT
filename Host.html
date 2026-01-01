@@ -312,7 +312,7 @@
                 <button onclick="toggleTopic(0)" class="btn btn-pink">Hiện chủ đề 1</button>
                 <button onclick="toggleTopic(1)" class="btn btn-pink">Hiện chủ đề 2</button>
                 <button onclick="toggleTopic(2)" class="btn btn-pink">Hiện chủ đề 3</button>
-                <button onclick="startRound2()" class="btn btn-green">Vòng 2</button>
+                <button onclick="startRound2()" class="btn btn-purple">Vòng 2</button>
             </div>
         </div>
     </div>
@@ -453,12 +453,23 @@
             await supabase.from('rooms').update({ data: updatedData }).eq('id', currentRoomId);
         };
 
+        // Thay thế hàm startRound2 trong Host.html
         window.startRound2 = async () => {
             if (!currentRoomId) return;
             const { data: room } = await supabase.from('rooms').select('data').eq('id', currentRoomId).single();
-            const updatedData = { ...room.data, status: { ...room.data.status, isPlaying: true, timestamp: Date.now() } };
+
+            // Đảm bảo trạng thái isPlaying là true và cập nhật timestamp mới nhất
+            const updatedData = {
+                ...room.data,
+                status: {
+                    ...room.data.status,
+                    isPlaying: true,
+                    timestamp: Date.now()
+                }
+            };
+
             await supabase.from('rooms').update({ data: updatedData }).eq('id', currentRoomId);
-            showMessage("Đã phát lệnh Vòng 2!");
+            showMessage("Đã phát lệnh Vòng 2 cho tất cả thí sinh!");
         };
 
         function listenToRoom(roomId) {

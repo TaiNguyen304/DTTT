@@ -77,8 +77,8 @@
 
         .info-bar {
             width: 100%;
-            background: purple;
-            color: white;
+            background: yellow;
+            color: black;
             padding: 16px;
             border-radius: 12px;
             display: flex;
@@ -105,7 +105,7 @@
         }
 
         .video-container.active {
-            border-color: lime;
+            border-color: blue;
         }
 
         .topic-label {
@@ -192,8 +192,8 @@
 
     <div id="mainSection">
         <div class="info-bar">
-            <span>PHÒNG: <b id="displayRoomId">---</b></span>
-            <span id="displayUser">---</span>
+            <span style="font-weight: bold;">PHÒNG: <b id="displayRoomId">---</b></span>
+            <span id="displayUser" style="font-weight: bold;">---</span>
         </div>
 
         <div class="video-grid">
@@ -278,24 +278,37 @@
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                     const data = payload.new.data;
 
-                    // Cập nhật chủ đề
-                    if (data.status && data.status.showTopic) {
-                        data.status.showTopic.forEach((show, i) => {
-                            if (show && data.round2Videos[i]) {
-                                document.getElementById(`topic${i}`).innerText = data.round2Videos[i].topic;
+                    // 1. Cập nhật tên chủ đề và Nạp sẵn Video (Preload)
+                    if (data.round2Videos && data.round2Videos.length > 0) {
+                        data.round2Videos.forEach((videoData, i) => {
+                            const v = document.getElementById(`video${i}`);
+                            const t = document.getElementById(`topic${i}`);
+
+                            // Hiển thị tên chủ đề nếu Host đã cho phép hiện
+                            if (data.status.showTopic && data.status.showTopic[i]) {
+                                t.innerText = videoData.topic;
+                            }
+
+                            // Nạp URL video nếu chưa có (nạp trước để khi bấm Play là chạy ngay)
+                            if (videoData.url && v.getAttribute('data-loaded-url') !== videoData.url) {
+                                v.src = videoData.url;
+                                v.setAttribute('data-loaded-url', videoData.url);
+                                v.load(); // Tải trước dữ liệu video
+                                v.muted = true; // Để mặc định tắt tiếng để chắc chắn trình duyệt cho phép Play
                             }
                         });
                     }
 
-                    // Phát video đồng loạt
-                    if (data.status && data.status.isPlaying) {
+                    // 2. Lệnh phát video đồng loạt
+                    if (data.status && data.status.isPlaying === true) {
                         for (let i = 0; i < 3; i++) {
                             const v = document.getElementById(`video${i}`);
-                            if (!v.src && data.round2Videos[i]) {
-                                v.src = data.round2Videos[i].url;
-                                v.load();
+                            if (v.src) {
+                                // Trình duyệt yêu cầu trả về một Promise cho .play()
+                                v.play().catch(error => {
+                                    console.error("Autoplay bị chặn, cần tương tác người dùng:", error);
+                                });
                             }
-                            v.play().catch(() => { });
                         }
                     }
                 }).subscribe();
