@@ -1023,9 +1023,7 @@
             <span id="previewTopicBadge1" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #450a0a; color: #fca5a5; border: 1px solid #991b1b;">Khóa</span>
           </div>
           <div class="video-container-ratio">
-            <video id="previewVideoEl1" muted playsinline>
-              <source id="previewSource1" src="" type="video/mp4">
-            </video>
+            <video id="previewVideoEl1" muted playsinline preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           </div>
           <div style="font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="previewTopicName1">Chủ đề 1</div>
         </div>
@@ -1037,9 +1035,7 @@
             <span id="previewTopicBadge2" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #451a03; color: #fde68a; border: 1px solid #92400e;">Khóa</span>
           </div>
           <div class="video-container-ratio">
-            <video id="previewVideoEl2" muted playsinline>
-              <source id="previewSource2" src="" type="video/mp4">
-            </video>
+            <video id="previewVideoEl2" muted playsinline preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           </div>
           <div style="font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="previewTopicName2">Chủ đề 2</div>
         </div>
@@ -1051,9 +1047,7 @@
             <span id="previewTopicBadge3" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #172554; color: #bfdbfe; border: 1px solid #1e3a8a;">Khóa</span>
           </div>
           <div class="video-container-ratio">
-            <video id="previewVideoEl3" muted playsinline>
-              <source id="previewSource3" src="" type="video/mp4">
-            </video>
+            <video id="previewVideoEl3" muted playsinline preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           </div>
           <div style="font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="previewTopicName3">Chủ đề 3</div>
         </div>
@@ -1588,23 +1582,32 @@
     }
 
     function loadPreviewVideos(u1, u2, u3) {
-      const formatted1 = window.formatVideoUrl ? window.formatVideoUrl(u1) : u1;
-      const formatted2 = window.formatVideoUrl ? window.formatVideoUrl(u2) : u2;
-      const formatted3 = window.formatVideoUrl ? window.formatVideoUrl(u3) : u3;
+      const v1 = document.getElementById('previewVideoEl1');
+      const v2 = document.getElementById('previewVideoEl2');
+      const v3 = document.getElementById('previewVideoEl3');
 
-      const setSrc = (elId, srcUrl) => {
-        const v = document.getElementById(elId);
-        if (!v || !srcUrl) return;
-        v.muted = true;
-        if (!v.src || !v.src.includes(srcUrl)) {
-          v.src = srcUrl;
-          v.load();
-        }
-      };
+      if (window.attachVideoSafely) {
+        if (v1 && u1) window.attachVideoSafely(v1, u1);
+        if (v2 && u2) window.attachVideoSafely(v2, u2);
+        if (v3 && u3) window.attachVideoSafely(v3, u3);
+      } else {
+        const formatted1 = window.formatVideoUrl ? window.formatVideoUrl(u1) : u1;
+        const formatted2 = window.formatVideoUrl ? window.formatVideoUrl(u2) : u2;
+        const formatted3 = window.formatVideoUrl ? window.formatVideoUrl(u3) : u3;
 
-      setSrc('previewVideoEl1', formatted1);
-      setSrc('previewVideoEl2', formatted2);
-      setSrc('previewVideoEl3', formatted3);
+        const setSrc = (v, srcUrl) => {
+          if (!v || !srcUrl) return;
+          v.muted = true;
+          if (!v.src || !v.src.includes(srcUrl)) {
+            v.src = srcUrl;
+            v.load();
+          }
+        };
+
+        setSrc(v1, formatted1);
+        setSrc(v2, formatted2);
+        setSrc(v3, formatted3);
+      }
     }
 
     function saveAndSyncLinks() {
@@ -1647,13 +1650,13 @@
       reader.onload = function(evt) {
         try {
           const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: 'array', cellFormula: true, cellHTML: true, cellStyles: true });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
           if (json && json.length > 0) {
-            parseExcelRows(json);
+            parseExcelRows(json, worksheet);
           } else {
             showToast('File Excel không có dữ liệu!', 'error');
           }
@@ -1665,10 +1668,17 @@
       reader.readAsArrayBuffer(file);
     }
 
-    function parseExcelRows(rows) {
+    function parseExcelRows(rows, worksheet) {
       let t1 = '', v1 = '', t2 = '', v2 = '', t3 = '', v3 = '';
 
-      // Pattern 1: Table format as in user image:
+      const getCellHyperlink = (colLetter, rowIdx) => {
+        if (!worksheet) return '';
+        const cell = worksheet[colLetter + rowIdx];
+        if (cell && cell.l && cell.l.Target) return cell.l.Target;
+        return '';
+      };
+
+      // Table format as in user form:
       // Row 0: [Số chủ đề, Tên chủ đề, Link video]
       // Row 1: [1, Chủ đề 1, Link video 1]
       // Row 2: [2, Chủ đề 2, Link video 2]
@@ -1679,37 +1689,29 @@
 
         const colA = String(row[0] !== undefined ? row[0] : '').trim();
         const colB = String(row[1] !== undefined ? row[1] : '').trim();
-        const colC = String(row[2] !== undefined ? row[2] : '').trim();
+        let colC = String(row[2] !== undefined ? row[2] : '').trim();
 
-        if (colA === '1' || colA.toLowerCase().includes('1')) {
-          if (colB) t1 = colB;
+        // Check if hyperlink exists in cell
+        const linkInC = getCellHyperlink('C', r + 1) || getCellHyperlink('B', r + 1) || getCellHyperlink('A', r + 1);
+        if (linkInC) {
+          colC = linkInC;
+        }
+
+        // If colC is empty but colB has drive link
+        if (!colC.includes('drive.google') && colB.includes('drive.google')) {
+          colC = colB;
+        }
+
+        if (colA === '1' || colA.includes('1') || r === 1) {
+          if (colB && !colB.includes('drive.google')) t1 = colB;
           if (colC) v1 = colC;
-        } else if (colA === '2' || colA.toLowerCase().includes('2')) {
-          if (colB) t2 = colB;
+        } else if (colA === '2' || colA.includes('2') || r === 2) {
+          if (colB && !colB.includes('drive.google')) t2 = colB;
           if (colC) v2 = colC;
-        } else if (colA === '3' || colA.toLowerCase().includes('3')) {
-          if (colB) t3 = colB;
-          if (colC) v3 = colC;
-        } else if (r === 1) {
-          if (colB) t1 = colB;
-          if (colC) v1 = colC;
-        } else if (r === 2) {
-          if (colB) t2 = colB;
-          if (colC) v2 = colC;
-        } else if (r === 3) {
-          if (colB) t3 = colB;
+        } else if (colA === '3' || colA.includes('3') || r === 3) {
+          if (colB && !colB.includes('drive.google')) t3 = colB;
           if (colC) v3 = colC;
         }
-      }
-
-      // Pattern 2: Single-row horizontal format fallback
-      if (!t1 && rows[1]) {
-        if (rows[1][0]) t1 = String(rows[1][0]).trim();
-        if (rows[1][1]) v1 = String(rows[1][1]).trim();
-        if (rows[1][2]) t2 = String(rows[1][2]).trim();
-        if (rows[1][3]) v2 = String(rows[1][3]).trim();
-        if (rows[1][4]) t3 = String(rows[1][4]).trim();
-        if (rows[1][5]) v3 = String(rows[1][5]).trim();
       }
 
       if (t1) document.getElementById('inputTopic1').value = t1;
@@ -1720,7 +1722,7 @@
       if (v3) document.getElementById('inputVideo3').value = v3;
 
       saveAndSyncLinks();
-      showToast('Đã đọc và nhập thành công dữ liệu đề thi theo form ảnh!', 'success');
+      showToast('Đã đọc và nhập thành công dữ liệu đề thi theo form Excel!', 'success');
     }
 
     function downloadExcelTemplate() {

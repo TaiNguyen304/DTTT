@@ -126,8 +126,39 @@ demoRoom.passwords = {
 
 const activeTranscodes = new Map();
 
+function extractDriveFileId(url) {
+  if (!url) return null;
+  url = String(url).trim();
+  if (url.startsWith('/api/drive-video/')) {
+    return url.replace('/api/drive-video/', '').split('?')[0].trim();
+  }
+
+  const drivePatterns = [
+    /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.usercontent\.google\.com\/download\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i,
+    /docs\.google\.com\/(?:file\/d\/|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i
+  ];
+
+  for (const p of drivePatterns) {
+    const match = url.match(p);
+    if (match && match[1]) return match[1];
+  }
+
+  if (/^[a-zA-Z0-9_-]{25,60}$/.test(url)) {
+    return url;
+  }
+
+  return null;
+}
+
 function streamLocalFile(filePath, req, res) {
   try {
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Video file not found');
+    }
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
     const range = req.headers.range;
@@ -175,8 +206,9 @@ function streamLocalFile(filePath, req, res) {
 }
 
 async function ensureH264Video(fileId) {
+  if (!fileId) throw new Error('Missing fileId');
   const targetFilePath = path.join(VIDEO_CACHE_DIR, `${fileId}.mp4`);
-  if (fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).size > 1000) {
+  if (fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).size > 10000) {
     return targetFilePath;
   }
 
@@ -196,7 +228,17 @@ async function ensureH264Video(fileId) {
         if (code === 0 && fs.existsSync(rawFilePath) && fs.statSync(rawFilePath).size > 1000) {
           resolve();
         } else {
-          reject(new Error(`Failed to download Drive file ${fileId}`));
+          // Fallback to second url pattern
+          const backupUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+          const curl2 = spawn('curl', ['-s', '-L', backupUrl, '-o', rawFilePath]);
+          curl2.on('close', (code2) => {
+            if (code2 === 0 && fs.existsSync(rawFilePath) && fs.statSync(rawFilePath).size > 1000) {
+              resolve();
+            } else {
+              reject(new Error(`Failed to download Drive file ${fileId}`));
+            }
+          });
+          curl2.on('error', reject);
         }
       });
       curl.on('error', reject);
@@ -232,14 +274,14 @@ async function ensureH264Video(fileId) {
         });
       });
     } else {
-      console.log(`[VideoEngine] Transcoding ${fileId} (HEVC/H.265) to web-standard H.264...`);
+      console.log(`[VideoEngine] Transcoding ${fileId} (HEVC/H.265) to web-standard H.264 with ultrafast preset...`);
       await new Promise((resolve, reject) => {
         const ff = spawn('ffmpeg', [
           '-y',
           '-i', rawFilePath,
           '-c:v', 'libx264',
-          '-preset', 'veryfast',
-          '-crf', '22',
+          '-preset', 'ultrafast',
+          '-crf', '23',
           '-pix_fmt', 'yuv420p',
           '-c:a', 'copy',
           '-movflags', '+faststart',
@@ -248,13 +290,15 @@ async function ensureH264Video(fileId) {
         ff.on('close', (code) => {
           try { fs.unlinkSync(rawFilePath); } catch (e) {}
           if (code === 0) resolve();
-          else reject(new Error('FFmpeg conversion failed'));
+          else reject(new Error('FFmpeg conversion failed with code ' + code));
         });
         ff.on('error', reject);
       });
     }
 
-    console.log(`[VideoEngine] Successfully prepared H.264 video: ${targetFilePath}`);
+    console.log(`[VideoEngine] Successfully prepared H.264 video: ${targetFilePath} (${fs.statSync(targetFilePath).size} bytes)`);
+    // Broadcast to all connected sockets that this video is ready
+    io.emit('video-ready', { fileId, url: `/api/drive-video/${fileId}` });
     return targetFilePath;
   })().finally(() => {
     activeTranscodes.delete(fileId);
@@ -263,6 +307,21 @@ async function ensureH264Video(fileId) {
   activeTranscodes.set(fileId, promise);
   return promise;
 }
+
+// Background prewarm helper
+function prewarmVideos(urls = []) {
+  for (const url of urls) {
+    const fileId = extractDriveFileId(url);
+    if (fileId) {
+      ensureH264Video(fileId).catch(err => {
+        console.warn(`[VideoEngine] Pre-warm failed for ${fileId}:`, err.message);
+      });
+    }
+  }
+}
+
+// Start prewarming initial demo videos immediately
+prewarmVideos([DEFAULT_DEMO.video1Url, DEFAULT_DEMO.video2Url, DEFAULT_DEMO.video3Url]);
 
 // Google Drive Stream Proxy Route (with guaranteed H.264 support)
 app.get('/api/drive-video/:fileId', async (req, res) => {
@@ -278,6 +337,20 @@ app.get('/api/drive-video/:fileId', async (req, res) => {
     const driveUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
     proxyVideoStream(driveUrl, req, res, 'video/mp4');
   }
+});
+
+// Video preparation status API
+app.get('/api/video-status/:fileId', (req, res) => {
+  const fileId = req.params.fileId;
+  const targetFilePath = path.join(VIDEO_CACHE_DIR, `${fileId}.mp4`);
+  const isReady = fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).size > 10000;
+  const isProcessing = activeTranscodes.has(fileId);
+  res.json({
+    fileId,
+    ready: isReady,
+    processing: isProcessing,
+    size: isReady ? fs.statSync(targetFilePath).size : 0
+  });
 });
 
 // Proxy for other external videos with Range & CORS support
@@ -584,6 +657,9 @@ io.on('connection', (socket) => {
     if (data.video1Url !== undefined) room.video1Url = data.video1Url;
     if (data.video2Url !== undefined) room.video2Url = data.video2Url;
     if (data.video3Url !== undefined) room.video3Url = data.video3Url;
+
+    // Trigger pre-warming for newly updated video links immediately
+    prewarmVideos([room.video1Url, room.video2Url, room.video3Url]);
 
     io.to(`room-${currentRoomId}`).emit('links-updated', {
       topic1: room.topic1,

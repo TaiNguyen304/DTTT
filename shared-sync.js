@@ -61,11 +61,55 @@ function formatVideoUrl(url) {
     }
   }
 
-  if (/^[a-zA-Z0-9_-]{25,50}$/.test(url)) {
+  if (/^[a-zA-Z0-9_-]{25,60}$/.test(url)) {
     return `/api/drive-video/${url}`;
   }
 
   return url;
+}
+
+// Safely configure and load a video element without <source> conflicts
+function attachVideoSafely(videoEl, rawUrl) {
+  if (!videoEl || !rawUrl) return;
+  const targetUrl = formatVideoUrl(rawUrl);
+  
+  // Clear any existing <source> child tags to prevent browser source resolution conflicts
+  while (videoEl.firstChild) {
+    videoEl.removeChild(videoEl.firstChild);
+  }
+
+  videoEl.playsInline = true;
+  videoEl.muted = true;
+  videoEl.preload = 'auto';
+
+  if (videoEl.src !== targetUrl && !videoEl.src.endsWith(targetUrl)) {
+    videoEl.src = targetUrl;
+    try {
+      videoEl.load();
+    } catch (e) {}
+  }
+
+  // Automatic retry on network or decode glitch while server is preparing H.264
+  if (!videoEl._retryHandlerAttached) {
+    videoEl._retryHandlerAttached = true;
+    let retryCount = 0;
+    videoEl.addEventListener('error', (e) => {
+      if (retryCount < 5 && videoEl.src) {
+        retryCount++;
+        const currentSrc = videoEl.src;
+        setTimeout(() => {
+          if (videoEl.src === currentSrc) {
+            console.log(`[VideoPlayer] Retrying video reload (${retryCount}/5)...`);
+            videoEl.load();
+          }
+        }, 1500 * retryCount);
+      }
+    });
+
+    videoEl.addEventListener('canplay', () => {
+      retryCount = 0;
+    });
+  }
 }
 
 // Fixed audio filenames
@@ -483,6 +527,7 @@ class UniversalSyncClock {
 
 window.soundEngine = new SoundFXEngine();
 window.formatVideoUrl = formatVideoUrl;
+window.attachVideoSafely = attachVideoSafely;
 window.UniversalSyncClock = UniversalSyncClock;
 
 // Unlock audio context on any user interaction

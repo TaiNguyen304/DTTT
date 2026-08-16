@@ -559,25 +559,19 @@
         
         <!-- KHUNG 1: VIDEO 1 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-red">
-          <video id="videoEl1" playsinline muted preload="auto">
-            <source id="source1" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4">
-          </video>
+          <video id="videoEl1" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           <div class="video-label-badge red">Video 1 (Đỏ)</div>
         </div>
 
         <!-- KHUNG 2: VIDEO 2 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-yellow">
-          <video id="videoEl2" playsinline muted preload="auto">
-            <source id="source2" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4">
-          </video>
+          <video id="videoEl2" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           <div class="video-label-badge yellow">Video 2 (Vàng)</div>
         </div>
 
         <!-- KHUNG 3: VIDEO 3 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-blue">
-          <video id="videoEl3" playsinline muted preload="auto">
-            <source id="source3" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4" type="video/mp4">
-          </video>
+          <video id="videoEl3" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           <div class="video-label-badge blue">Video 3 (Xanh)</div>
         </div>
 
@@ -788,23 +782,32 @@
     function updateLinks(links) {
       if (!links) return;
       
-      const src1 = window.formatVideoUrl ? window.formatVideoUrl(links.video1Url) : links.video1Url;
-      const src2 = window.formatVideoUrl ? window.formatVideoUrl(links.video2Url) : links.video2Url;
-      const src3 = window.formatVideoUrl ? window.formatVideoUrl(links.video3Url) : links.video3Url;
+      const v1 = document.getElementById('videoEl1');
+      const v2 = document.getElementById('videoEl2');
+      const v3 = document.getElementById('videoEl3');
 
-      const setSrc = (elId, srcUrl) => {
-        const v = document.getElementById(elId);
-        if (!v || !srcUrl) return;
-        v.muted = true;
-        if (!v.src || !v.src.includes(srcUrl)) {
-          v.src = srcUrl;
-          v.load();
-        }
-      };
+      if (window.attachVideoSafely) {
+        if (v1 && links.video1Url) window.attachVideoSafely(v1, links.video1Url);
+        if (v2 && links.video2Url) window.attachVideoSafely(v2, links.video2Url);
+        if (v3 && links.video3Url) window.attachVideoSafely(v3, links.video3Url);
+      } else {
+        const src1 = window.formatVideoUrl ? window.formatVideoUrl(links.video1Url) : links.video1Url;
+        const src2 = window.formatVideoUrl ? window.formatVideoUrl(links.video2Url) : links.video2Url;
+        const src3 = window.formatVideoUrl ? window.formatVideoUrl(links.video3Url) : links.video3Url;
 
-      setSrc('videoEl1', src1);
-      setSrc('videoEl2', src2);
-      setSrc('videoEl3', src3);
+        const setSrc = (v, srcUrl) => {
+          if (!v || !srcUrl) return;
+          v.muted = true;
+          if (!v.src || !v.src.includes(srcUrl)) {
+            v.src = srcUrl;
+            v.load();
+          }
+        };
+
+        setSrc(v1, src1);
+        setSrc(v2, src2);
+        setSrc(v3, src3);
+      }
 
       if (links.topic1) document.getElementById('topicBox1').dataset.topicName = links.topic1;
       if (links.topic2) document.getElementById('topicBox2').dataset.topicName = links.topic2;
