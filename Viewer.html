@@ -559,7 +559,7 @@
         
         <!-- KHUNG 1: VIDEO 1 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-red">
-          <video id="videoEl1" playsinline preload="auto">
+          <video id="videoEl1" playsinline muted preload="auto">
             <source id="source1" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4">
           </video>
           <div class="video-label-badge red">Video 1 (Đỏ)</div>
@@ -567,7 +567,7 @@
 
         <!-- KHUNG 2: VIDEO 2 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-yellow">
-          <video id="videoEl2" playsinline preload="auto">
+          <video id="videoEl2" playsinline muted preload="auto">
             <source id="source2" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4">
           </video>
           <div class="video-label-badge yellow">Video 2 (Vàng)</div>
@@ -575,7 +575,7 @@
 
         <!-- KHUNG 3: VIDEO 3 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-blue">
-          <video id="videoEl3" playsinline preload="auto">
+          <video id="videoEl3" playsinline muted preload="auto">
             <source id="source3" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4" type="video/mp4">
           </video>
           <div class="video-label-badge blue">Video 3 (Xanh)</div>
@@ -631,8 +631,7 @@
     const VIEWER_ROLE = 'viewer';
     let socket = null;
     let currentRoomId = '123456';
-    let timerCountdownInterval = null;
-    let secondsLeft = 60;
+    let syncClock = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -643,6 +642,28 @@
       }
 
       document.getElementById('headerRoomId').innerText = currentRoomId;
+
+      const v1 = document.getElementById('videoEl1');
+      const v2 = document.getElementById('videoEl2');
+      const v3 = document.getElementById('videoEl3');
+
+      syncClock = new window.UniversalSyncClock({
+        videoElements: [v1, v2, v3],
+        isMutedVideo: true,
+        onTick: (state) => {
+          updateTimerDisplay(state.secondsRemaining);
+          const stateEl = document.getElementById('globalTimerState');
+          if (stateEl) {
+            if (state.isTimerRunning) stateEl.innerText = 'Đang đếm ngược';
+            else if (state.secondsRemaining === 0) stateEl.innerText = 'Hết giờ';
+            else if (state.secondsRemaining === 60) stateEl.innerText = 'Đồng bộ';
+            else stateEl.innerText = 'Tạm dừng';
+          }
+        },
+        onFinish: () => {
+          window.soundEngine.stopClipBed();
+        }
+      });
 
       initSocket();
       initAudioUnlockListener();
@@ -709,11 +730,39 @@
       });
 
       socket.on('video-action', (data) => {
-        handleVideoAction(data);
+        if (data.action === 'play') {
+          syncClock.start(data);
+          window.soundEngine.playClipBed(data.currentTime || syncClock.currentVideoTime);
+        } else if (data.action === 'pause') {
+          syncClock.pause(data);
+          window.soundEngine.pauseClipBed();
+        } else if (data.action === 'seek') {
+          syncClock.reset(data);
+          window.soundEngine.stopClipBed();
+        }
       });
 
       socket.on('timer-action', (data) => {
-        handleTimerAction(data);
+        if (data.action === 'start') {
+          syncClock.start(data);
+          window.soundEngine.playClipBed(syncClock.currentVideoTime);
+        } else if (data.action === 'pause') {
+          syncClock.pause(data);
+          window.soundEngine.pauseClipBed();
+        } else if (data.action === 'reset') {
+          syncClock.reset(data);
+          window.soundEngine.stopClipBed();
+        } else if (data.action === 'finish') {
+          syncClock.pause({ secondsRemaining: 0, currentTime: 60 });
+          window.soundEngine.stopClipBed();
+        }
+      });
+
+      socket.on('time-sync', (data) => {
+        if (syncClock) syncClock.sync(data);
+        if (data.isPlaying) {
+          window.soundEngine.playClipBed(data.currentSeconds);
+        }
       });
     }
 
@@ -722,12 +771,17 @@
       updateLinks(state);
       updateTopicVisibility(state);
 
-      if (state.timer60s) {
-        handleTimerAction(state.timer60s);
-      }
-
-      if (state.videoState) {
-        handleVideoAction(state.videoState);
+      if (syncClock) {
+        syncClock.sync({
+          serverTime: state.serverTime,
+          isPlaying: state.videoState?.isPlaying,
+          isTimerRunning: state.timer60s?.isRunning,
+          currentSeconds: state.videoState?.currentSeconds || state.videoState?.currentTime,
+          secondsRemaining: state.timer60s?.secondsRemaining
+        });
+        if (state.videoState?.isPlaying) {
+          window.soundEngine.playClipBed(state.videoState?.currentSeconds || 0);
+        }
       }
     }
 
@@ -741,6 +795,7 @@
       const setSrc = (elId, srcUrl) => {
         const v = document.getElementById(elId);
         if (!v || !srcUrl) return;
+        v.muted = true;
         if (!v.src || !v.src.includes(srcUrl)) {
           v.src = srcUrl;
           v.load();
@@ -811,74 +866,17 @@
       }
     }
 
-    function handleVideoAction(data) {
-      const v1 = document.getElementById('videoEl1');
-      const v2 = document.getElementById('videoEl2');
-      const v3 = document.getElementById('videoEl3');
-
-      if (typeof data.currentTime === 'number') {
-        if (v1 && Math.abs(v1.currentTime - data.currentTime) > 0.25) v1.currentTime = data.currentTime;
-        if (v2 && Math.abs(v2.currentTime - data.currentTime) > 0.25) v2.currentTime = data.currentTime;
-        if (v3 && Math.abs(v3.currentTime - data.currentTime) > 0.25) v3.currentTime = data.currentTime;
-      }
-
-      if (data.action === 'play' || data.isPlaying) {
-        if (v1) v1.play().catch(()=>{});
-        if (v2) v2.play().catch(()=>{});
-        if (v3) v3.play().catch(()=>{});
-        window.soundEngine.playClipBed(data.currentTime || 0);
-      } else if (data.action === 'pause' || data.isPlaying === false) {
-        if (v1) v1.pause();
-        if (v2) v2.pause();
-        if (v3) v3.pause();
-        window.soundEngine.pauseClipBed();
-      } else if (data.action === 'seek') {
-        if (v1) { v1.currentTime = data.currentTime || 0; v1.pause(); }
-        if (v2) { v2.currentTime = data.currentTime || 0; v2.pause(); }
-        if (v3) { v3.currentTime = data.currentTime || 0; v3.pause(); }
-        window.soundEngine.stopClipBed();
-      }
-    }
-
-    function handleTimerAction(data) {
-      if (timerCountdownInterval) clearInterval(timerCountdownInterval);
-
-      if (data.action === 'start' || data.isRunning) {
-        secondsLeft = typeof data.secondsRemaining === 'number' ? data.secondsRemaining : 60;
-        updateTimerDisplay(secondsLeft);
-        document.getElementById('globalTimerState').innerText = 'Đang đếm ngược';
-
-        timerCountdownInterval = setInterval(() => {
-          secondsLeft--;
-          updateTimerDisplay(secondsLeft);
-          if (secondsLeft <= 0) {
-            clearInterval(timerCountdownInterval);
-            document.getElementById('globalTimerState').innerText = 'Hết giờ';
-            window.soundEngine.stopClipBed();
-          }
-        }, 1000);
-      } else if (data.action === 'pause') {
-        if (typeof data.secondsRemaining === 'number') secondsLeft = data.secondsRemaining;
-        updateTimerDisplay(secondsLeft);
-        document.getElementById('globalTimerState').innerText = 'Tạm dừng';
-        window.soundEngine.pauseClipBed();
-      } else if (data.action === 'reset') {
-        secondsLeft = 60;
-        updateTimerDisplay(60);
-        document.getElementById('globalTimerState').innerText = 'Đã đặt lại 60s';
-        window.soundEngine.stopClipBed();
-      }
-    }
-
     function updateTimerDisplay(sec) {
       const displayVal = `${Math.max(0, sec)}s`;
       const isWarning = sec <= 10 && sec > 0;
       
       ['timerDisplay1', 'timerDisplay2', 'timerDisplay3'].forEach(id => {
         const el = document.getElementById(id);
-        el.innerText = displayVal;
-        if (isWarning) el.classList.add('warning');
-        else el.classList.remove('warning');
+        if (el) {
+          el.innerText = displayVal;
+          if (isWarning) el.classList.add('warning');
+          else el.classList.remove('warning');
+        }
       });
     }
   </script>

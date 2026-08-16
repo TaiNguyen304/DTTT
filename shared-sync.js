@@ -1,25 +1,21 @@
 /**
  * Game Show Real-time Audio & Video Synchronization Engine
- * Includes Anti-DevTools Protection and High-Performance Sound Synthesizer
+ * Includes Anti-DevTools Protection, High-Precision Universal Time Sync & Web Audio Synthesizer
  */
 
 // 1. DISABLE DEVTOOLS ON ALL PAGES
 (function disableDevToolsGlobal() {
-  // Disable right click / context menu
   document.addEventListener('contextmenu', function (e) {
     e.preventDefault();
     return false;
   }, { capture: true });
 
-  // Disable DevTools and View Source keyboard shortcuts
   window.addEventListener('keydown', function (e) {
-    // F12
     if (e.key === 'F12' || e.keyCode === 123) {
       e.preventDefault();
       e.stopPropagation();
       return false;
     }
-    // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (or Cmd+Option+I, Cmd+Option+J, Cmd+Option+C on Mac)
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && (
       e.key === 'I' || e.key === 'i' || e.keyCode === 73 ||
       e.key === 'J' || e.key === 'j' || e.keyCode === 74 ||
@@ -29,13 +25,11 @@
       e.stopPropagation();
       return false;
     }
-    // Ctrl+U / Cmd+U (View Source)
     if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
       e.preventDefault();
       e.stopPropagation();
       return false;
     }
-    // Ctrl+S / Cmd+S (Save Page)
     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.keyCode === 83)) {
       e.preventDefault();
       e.stopPropagation();
@@ -44,15 +38,13 @@
   }, { capture: true });
 })();
 
-// Helper to convert Google Drive link to streaming direct URL
+// Helper to convert Google Drive link to streaming direct URL (which streams web-standard H.264)
 function formatVideoUrl(url) {
   if (!url) return '';
   url = String(url).trim();
   
-  // If already our API endpoint
   if (url.startsWith('/api/drive-video/')) return url;
 
-  // Extract Google Drive File ID from all common Google Drive URL patterns
   const drivePatterns = [
     /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
     /drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
@@ -69,7 +61,6 @@ function formatVideoUrl(url) {
     }
   }
 
-  // If pure fileId (length between 25 and 50 characters)
   if (/^[a-zA-Z0-9_-]{25,50}$/.test(url)) {
     return `/api/drive-video/${url}`;
   }
@@ -77,7 +68,7 @@ function formatVideoUrl(url) {
   return url;
 }
 
-// Fixed audio filenames as requested
+// Fixed audio filenames
 const AUDIO_FILES = {
   CATEGORY: 'The Master Of Minds - Category.mp3',
   COUNTDOWN_5S: 'The Master Of Minds - 5s CountDown.mp3',
@@ -85,7 +76,7 @@ const AUDIO_FILES = {
   CLIP_BED: 'The Master Of Minds - Clip bed R2.mp3'
 };
 
-// Web Audio API Synthesizer & MP3 Player for Game Show
+// Web Audio API Synthesizer & Audio Player
 class SoundFXEngine {
   constructor() {
     this.ctx = null;
@@ -95,7 +86,6 @@ class SoundFXEngine {
     this.clipBedAudio = null;
   }
 
-  // Check if audio should be silenced (Controller is completely silent)
   isMuted() {
     return window.IS_CONTROLLER === true;
   }
@@ -113,7 +103,6 @@ class SoundFXEngine {
     }
   }
 
-  // 1. Play Theme Audio (The Master Of Minds - Category.mp3)
   playTheme() {
     if (this.isMuted()) return;
     this.stopCategoryAndCountdown();
@@ -122,8 +111,7 @@ class SoundFXEngine {
     const audioUrl = '/' + encodeURIComponent(AUDIO_FILES.CATEGORY);
     try {
       this.currentCategoryAudio = new Audio(audioUrl);
-      this.currentCategoryAudio.play().catch(e => {
-        console.warn('MP3 file fallback to synthesizer:', e);
+      this.currentCategoryAudio.play().catch(() => {
         this.synthesizeThemeMusic();
       });
     } catch (e) {
@@ -131,7 +119,6 @@ class SoundFXEngine {
     }
   }
 
-  // 2. Play 5-Second Countdown Audio (The Master Of Minds - 5s CountDown.mp3)
   play5Seconds() {
     if (this.isMuted()) return;
     this.stopCategoryAndCountdown();
@@ -140,8 +127,7 @@ class SoundFXEngine {
     const audioUrl = '/' + encodeURIComponent(AUDIO_FILES.COUNTDOWN_5S);
     try {
       this.currentCountdownAudio = new Audio(audioUrl);
-      this.currentCountdownAudio.play().catch(e => {
-        console.warn('MP3 file fallback to synthesizer:', e);
+      this.currentCountdownAudio.play().catch(() => {
         this.synthesizeCountdown(5);
       });
     } catch (e) {
@@ -149,7 +135,6 @@ class SoundFXEngine {
     }
   }
 
-  // 3. Play 3-Second Countdown Audio (3s.mp3)
   play3Seconds() {
     if (this.isMuted()) return;
     this.stopCategoryAndCountdown();
@@ -158,8 +143,7 @@ class SoundFXEngine {
     const audioUrl = '/' + encodeURIComponent(AUDIO_FILES.COUNTDOWN_3S);
     try {
       this.currentCountdownAudio = new Audio(audioUrl);
-      this.currentCountdownAudio.play().catch(e => {
-        console.warn('MP3 file fallback to synthesizer:', e);
+      this.currentCountdownAudio.play().catch(() => {
         this.synthesizeCountdown(3);
       });
     } catch (e) {
@@ -167,7 +151,6 @@ class SoundFXEngine {
     }
   }
 
-  // 4. Play Clip Bed Audio when video plays (The Master Of Minds - Clip bed R2.mp3)
   playClipBed(currentTime = 0) {
     if (this.isMuted()) return;
     this.init();
@@ -180,19 +163,14 @@ class SoundFXEngine {
 
     try {
       if (typeof currentTime === 'number' && !isNaN(currentTime) && currentTime >= 0) {
-        if (Math.abs(this.clipBedAudio.currentTime - currentTime) > 0.3) {
+        if (Math.abs(this.clipBedAudio.currentTime - currentTime) > 0.4) {
           this.clipBedAudio.currentTime = currentTime;
         }
       }
-      this.clipBedAudio.play().catch(e => {
-        console.warn('Clip bed playback note:', e);
-      });
-    } catch (e) {
-      console.warn(e);
-    }
+      this.clipBedAudio.play().catch(() => {});
+    } catch (e) {}
   }
 
-  // Pause Clip Bed Audio
   pauseClipBed() {
     if (this.clipBedAudio) {
       try {
@@ -201,7 +179,6 @@ class SoundFXEngine {
     }
   }
 
-  // Stop & Reset Clip Bed Audio
   stopClipBed() {
     if (this.clipBedAudio) {
       try {
@@ -211,7 +188,6 @@ class SoundFXEngine {
     }
   }
 
-  // Stop category & countdown sounds
   stopCategoryAndCountdown() {
     if (this.currentCategoryAudio) {
       try {
@@ -233,24 +209,22 @@ class SoundFXEngine {
     this.currentThemeOscillators = [];
   }
 
-  // Stop all audio completely
   stopAll() {
     this.stopCategoryAndCountdown();
     this.stopClipBed();
   }
 
-  // Synthesizer Theme Fanfare fallback
   synthesizeThemeMusic() {
     if (this.isMuted() || !this.ctx) return;
     const now = this.ctx.currentTime;
     
     const chords = [
-      [261.63, 329.63, 392.00, 523.25], // C Major
-      [293.66, 369.99, 440.00, 587.33], // D Major
-      [329.63, 415.30, 493.88, 659.25], // E Major
-      [349.23, 440.00, 523.25, 698.46], // F Major
-      [392.00, 493.88, 587.33, 783.99], // G Major
-      [523.25, 659.25, 783.99, 1046.50] // C High Fanfare
+      [261.63, 329.63, 392.00, 523.25],
+      [293.66, 369.99, 440.00, 587.33],
+      [329.63, 415.30, 493.88, 659.25],
+      [349.23, 440.00, 523.25, 698.46],
+      [392.00, 493.88, 587.33, 783.99],
+      [523.25, 659.25, 783.99, 1046.50]
     ];
 
     chords.forEach((chord, chordIdx) => {
@@ -276,7 +250,6 @@ class SoundFXEngine {
     });
   }
 
-  // Synthesizer Countdown Beep fallback
   synthesizeCountdown(seconds) {
     if (this.isMuted() || !this.ctx) return;
     const now = this.ctx.currentTime;
@@ -304,8 +277,213 @@ class SoundFXEngine {
   }
 }
 
+// -------------------------------------------------------------
+// HIGH-PRECISION UNIVERSAL CLOCK & TAB-SWITCH DRIFT PROTECTOR
+// Guarantees exact timestamp sync across all tabs and devices
+// -------------------------------------------------------------
+
+class UniversalSyncClock {
+  constructor(options = {}) {
+    this.onTick = options.onTick || null;
+    this.onFinish = options.onFinish || null;
+    this.videoElements = options.videoElements || [];
+    this.isMutedVideo = !!options.isMutedVideo;
+
+    this.isPlaying = false;
+    this.isTimerRunning = false;
+    this.serverTimeOffset = 0; // localTime - serverTime
+    this.startedAt = 0;
+    this.startPosition = 0; // video seconds
+    this.startRemaining = 60; // countdown seconds
+    this.currentVideoTime = 0;
+    this.currentRemaining = 60;
+    this.rafId = null;
+
+    this.loop = this.loop.bind(this);
+    this.handleVisibility = this.handleVisibility.bind(this);
+
+    document.addEventListener('visibilitychange', this.handleVisibility);
+    window.addEventListener('focus', this.handleVisibility);
+    window.addEventListener('pageshow', this.handleVisibility);
+
+    // Periodic safety sync interval (100ms)
+    setInterval(() => {
+      this.tick();
+    }, 100);
+  }
+
+  setServerTime(serverTime) {
+    if (typeof serverTime === 'number' && serverTime > 0) {
+      this.serverTimeOffset = Date.now() - serverTime;
+    }
+  }
+
+  getAdjustedNow() {
+    return Date.now() - this.serverTimeOffset;
+  }
+
+  start(data = {}) {
+    if (data.serverTime) this.setServerTime(data.serverTime);
+    this.isPlaying = true;
+    this.isTimerRunning = true;
+    this.startedAt = data.startedAt || this.getAdjustedNow();
+    this.startPosition = typeof data.currentTime === 'number' ? data.currentTime : (typeof data.startPosition === 'number' ? data.startPosition : this.currentVideoTime);
+    this.startRemaining = typeof data.secondsRemaining === 'number' ? data.secondsRemaining : (typeof data.startRemaining === 'number' ? data.startRemaining : this.currentRemaining);
+    if (this.startRemaining <= 0) this.startRemaining = 60;
+
+    this.tick();
+    if (!this.rafId) this.rafId = requestAnimationFrame(this.loop);
+  }
+
+  pause(data = {}) {
+    if (data.serverTime) this.setServerTime(data.serverTime);
+    this.isPlaying = false;
+    this.isTimerRunning = false;
+    if (typeof data.currentTime === 'number') this.currentVideoTime = data.currentTime;
+    if (typeof data.secondsRemaining === 'number') this.currentRemaining = data.secondsRemaining;
+    this.startPosition = this.currentVideoTime;
+    this.startRemaining = this.currentRemaining;
+
+    this.tick();
+  }
+
+  reset(data = {}) {
+    this.isPlaying = false;
+    this.isTimerRunning = false;
+    this.currentVideoTime = 0;
+    this.currentRemaining = 60;
+    this.startPosition = 0;
+    this.startRemaining = 60;
+    this.startedAt = 0;
+
+    this.tick();
+  }
+
+  sync(data = {}) {
+    if (data.serverTime) this.setServerTime(data.serverTime);
+    this.isPlaying = !!data.isPlaying;
+    this.isTimerRunning = !!(data.isTimerRunning || data.isRunning);
+
+    if (this.isPlaying || this.isTimerRunning) {
+      this.startedAt = data.startedAt || this.startedAt || this.getAdjustedNow();
+      if (typeof data.startPosition === 'number') this.startPosition = data.startPosition;
+      if (typeof data.startRemaining === 'number') this.startRemaining = data.startRemaining;
+    } else {
+      if (typeof data.currentSeconds === 'number') this.currentVideoTime = data.currentSeconds;
+      if (typeof data.currentTime === 'number') this.currentVideoTime = data.currentTime;
+      if (typeof data.secondsRemaining === 'number') this.currentRemaining = data.secondsRemaining;
+      this.startPosition = this.currentVideoTime;
+      this.startRemaining = this.currentRemaining;
+    }
+
+    this.tick();
+    if ((this.isPlaying || this.isTimerRunning) && !this.rafId) {
+      this.rafId = requestAnimationFrame(this.loop);
+    }
+  }
+
+  tick() {
+    if (this.isPlaying || this.isTimerRunning) {
+      const now = this.getAdjustedNow();
+      const elapsed = Math.max(0, (now - this.startedAt) / 1000);
+      this.currentVideoTime = Math.min(60, this.startPosition + elapsed);
+      this.currentRemaining = Math.max(0, Math.ceil(this.startRemaining - elapsed));
+
+      if (this.currentRemaining <= 0 || this.currentVideoTime >= 60) {
+        this.isPlaying = false;
+        this.isTimerRunning = false;
+        this.currentRemaining = 0;
+        this.currentVideoTime = 60;
+        if (this.onFinish) this.onFinish();
+      }
+    }
+
+    // Sync all attached video elements
+    this.syncAttachedVideos();
+
+    // Trigger UI Callback
+    if (this.onTick) {
+      this.onTick({
+        videoTime: this.currentVideoTime,
+        secondsRemaining: this.currentRemaining,
+        isPlaying: this.isPlaying,
+        isTimerRunning: this.isTimerRunning
+      });
+    }
+  }
+
+  loop() {
+    this.tick();
+    if (this.isPlaying || this.isTimerRunning) {
+      this.rafId = requestAnimationFrame(this.loop);
+    } else {
+      this.rafId = null;
+    }
+  }
+
+  handleVisibility() {
+    // When tab becomes active or switches focus, immediately snap video and timers
+    this.tick();
+    this.syncAttachedVideos(true);
+  }
+
+  syncAttachedVideos(forceSeek = false) {
+    const target = this.currentVideoTime;
+    const playing = this.isPlaying;
+
+    this.videoElements.forEach(v => {
+      if (!v) return;
+
+      if (this.isMutedVideo) {
+        v.muted = true;
+      }
+
+      // Calculate time difference between video's current frame and target time
+      const diff = v.currentTime - target;
+      const absDiff = Math.abs(diff);
+
+      if (forceSeek || absDiff > 0.25) {
+        // Hard seek if drift is noticeable or forceSeek is requested
+        try {
+          v.currentTime = target;
+          v.playbackRate = 1.0;
+        } catch (e) {}
+      } else if (playing && absDiff > 0.04) {
+        // Micro-nudge playback rate (broadcast precision sync within 1 frame)
+        // If video is slightly ahead, slow down slightly; if behind, speed up slightly
+        if (diff > 0) {
+          v.playbackRate = 0.95;
+        } else {
+          v.playbackRate = 1.05;
+        }
+      } else {
+        if (v.playbackRate !== 1.0) {
+          v.playbackRate = 1.0;
+        }
+      }
+
+      if (playing) {
+        if (v.paused) {
+          const playPromise = v.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {
+              v.muted = true;
+              v.play().catch(() => {});
+            });
+          }
+        }
+      } else {
+        if (!v.paused) {
+          try { v.pause(); } catch (e) {}
+        }
+      }
+    });
+  }
+}
+
 window.soundEngine = new SoundFXEngine();
 window.formatVideoUrl = formatVideoUrl;
+window.UniversalSyncClock = UniversalSyncClock;
 
 // Unlock audio context on any user interaction
 document.addEventListener('click', () => {

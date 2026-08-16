@@ -3,8 +3,10 @@ import http from 'http';
 import https from 'https';
 import { Server as SocketIOServer } from 'socket.io';
 import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +21,11 @@ const io = new SocketIOServer(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const VIDEO_CACHE_DIR = path.join(__dirname, '.cache', 'videos');
+
+if (!fs.existsSync(VIDEO_CACHE_DIR)) {
+  fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -74,13 +81,16 @@ function getOrCreateRoom(roomId) {
       clipBedAudioUrl: DEFAULT_DEMO.clipBedAudioUrl,
       videoState: {
         isPlaying: false,
-        currentTime: 0,
+        startedAt: null,
+        startPosition: 0,
+        currentSeconds: 0,
         updatedAt: Date.now()
       },
       timer60s: {
         isRunning: false,
-        secondsRemaining: 60,
-        startedAt: null
+        startedAt: null,
+        startRemaining: 60,
+        secondsRemaining: 60
       },
       activeAudio: {
         type: null,
@@ -109,7 +119,168 @@ demoRoom.passwords = {
   player3: '3333'
 };
 
-// Helper to proxy video streams with Range support and CORS headers
+// -------------------------------------------------------------
+// VIDEO STREAMING & UNIVERSAL H.264 TRANSCODING ENGINE
+// Ensures video displays clear visuals across all browsers
+// -------------------------------------------------------------
+
+const activeTranscodes = new Map();
+
+function streamLocalFile(filePath, req, res) {
+  try {
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Accept, Content-Type, Origin');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize || end >= fileSize) {
+        res.status(416).setHeader('Content-Range', `bytes */${fileSize}`);
+        return res.end();
+      }
+
+      const chunkSize = end - start + 1;
+      const fileStream = fs.createReadStream(filePath, { start, end });
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Content-Length': chunkSize
+      });
+
+      fileStream.pipe(res);
+      req.on('close', () => fileStream.destroy());
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize
+      });
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+      req.on('close', () => fileStream.destroy());
+    }
+  } catch (err) {
+    console.error('streamLocalFile error:', err);
+    if (!res.headersSent) res.status(500).send('Error streaming file');
+  }
+}
+
+async function ensureH264Video(fileId) {
+  const targetFilePath = path.join(VIDEO_CACHE_DIR, `${fileId}.mp4`);
+  if (fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).size > 1000) {
+    return targetFilePath;
+  }
+
+  if (activeTranscodes.has(fileId)) {
+    return activeTranscodes.get(fileId);
+  }
+
+  const promise = (async () => {
+    const rawFilePath = path.join(VIDEO_CACHE_DIR, `temp_${fileId}_raw.mp4`);
+    const driveUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
+
+    console.log(`[VideoEngine] Downloading Google Drive file: ${fileId}...`);
+    // 1. Download raw file using curl
+    await new Promise((resolve, reject) => {
+      const curl = spawn('curl', ['-s', '-L', driveUrl, '-o', rawFilePath]);
+      curl.on('close', (code) => {
+        if (code === 0 && fs.existsSync(rawFilePath) && fs.statSync(rawFilePath).size > 1000) {
+          resolve();
+        } else {
+          reject(new Error(`Failed to download Drive file ${fileId}`));
+        }
+      });
+      curl.on('error', reject);
+    });
+
+    // 2. Check codec using ffprobe
+    const isH264 = await new Promise((resolve) => {
+      const ffprobe = spawn('ffprobe', [
+        '-v', 'error',
+        '-show_entries', 'stream=codec_name,codec_type',
+        '-of', 'default=noprint_wrappers=1',
+        rawFilePath
+      ]);
+      let output = '';
+      ffprobe.stdout.on('data', (d) => { output += d.toString(); });
+      ffprobe.on('close', () => {
+        resolve(output.includes('codec_name=h264') || output.includes('codec_name=avc1'));
+      });
+      ffprobe.on('error', () => resolve(false));
+    });
+
+    if (isH264) {
+      console.log(`[VideoEngine] File ${fileId} is already H.264. Optimizing faststart...`);
+      await new Promise((resolve) => {
+        const ff = spawn('ffmpeg', ['-y', '-i', rawFilePath, '-c', 'copy', '-movflags', '+faststart', targetFilePath]);
+        ff.on('close', () => {
+          try { fs.unlinkSync(rawFilePath); } catch (e) {}
+          resolve();
+        });
+        ff.on('error', () => {
+          try { fs.renameSync(rawFilePath, targetFilePath); } catch (e) {}
+          resolve();
+        });
+      });
+    } else {
+      console.log(`[VideoEngine] Transcoding ${fileId} (HEVC/H.265) to web-standard H.264...`);
+      await new Promise((resolve, reject) => {
+        const ff = spawn('ffmpeg', [
+          '-y',
+          '-i', rawFilePath,
+          '-c:v', 'libx264',
+          '-preset', 'veryfast',
+          '-crf', '22',
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'copy',
+          '-movflags', '+faststart',
+          targetFilePath
+        ]);
+        ff.on('close', (code) => {
+          try { fs.unlinkSync(rawFilePath); } catch (e) {}
+          if (code === 0) resolve();
+          else reject(new Error('FFmpeg conversion failed'));
+        });
+        ff.on('error', reject);
+      });
+    }
+
+    console.log(`[VideoEngine] Successfully prepared H.264 video: ${targetFilePath}`);
+    return targetFilePath;
+  })().finally(() => {
+    activeTranscodes.delete(fileId);
+  });
+
+  activeTranscodes.set(fileId, promise);
+  return promise;
+}
+
+// Google Drive Stream Proxy Route (with guaranteed H.264 support)
+app.get('/api/drive-video/:fileId', async (req, res) => {
+  const fileId = req.params.fileId;
+  if (!fileId) return res.status(400).send('File ID is required');
+
+  try {
+    const targetFilePath = await ensureH264Video(fileId);
+    streamLocalFile(targetFilePath, req, res);
+  } catch (err) {
+    console.error('Drive video error:', err);
+    // Fallback: proxy raw stream if transcoding failed
+    const driveUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
+    proxyVideoStream(driveUrl, req, res, 'video/mp4');
+  }
+});
+
+// Proxy for other external videos with Range & CORS support
 function proxyVideoStream(targetUrl, req, res, fallbackContentType = 'video/mp4', redirectCount = 0) {
   if (redirectCount > 5) {
     return res.status(508).send('Too many redirects');
@@ -129,7 +300,6 @@ function proxyVideoStream(targetUrl, req, res, fallbackContentType = 'video/mp4'
     }
 
     const upstreamReq = clientModule.get(targetUrl, { headers: requestHeaders }, (upstreamRes) => {
-      // Handle HTTP redirects (301, 302, 303, 307, 308)
       if ([301, 302, 303, 307, 308].includes(upstreamRes.statusCode) && upstreamRes.headers.location) {
         upstreamRes.resume();
         const nextUrl = new URL(upstreamRes.headers.location, targetUrl).href;
@@ -162,14 +332,12 @@ function proxyVideoStream(targetUrl, req, res, fallbackContentType = 'video/mp4'
       res.writeHead(statusCode, responseHeaders);
       upstreamRes.pipe(res);
 
-      upstreamRes.on('error', (err) => {
-        console.error('Upstream response pipe error:', err.message);
+      upstreamRes.on('error', () => {
         if (!res.headersSent) res.status(500).send('Streaming error');
       });
     });
 
-    upstreamReq.on('error', (err) => {
-      console.error('Upstream request error:', err.message);
+    upstreamReq.on('error', () => {
       if (!res.headersSent) res.status(502).send('Video stream gateway error');
     });
 
@@ -177,21 +345,10 @@ function proxyVideoStream(targetUrl, req, res, fallbackContentType = 'video/mp4'
       upstreamReq.destroy();
     });
   } catch (err) {
-    console.error('proxyVideoStream URL error:', err.message);
     if (!res.headersSent) res.status(400).send('Invalid video URL');
   }
 }
 
-// Google Drive Stream Proxy Route
-app.get('/api/drive-video/:fileId', (req, res) => {
-  const fileId = req.params.fileId;
-  if (!fileId) return res.status(400).send('File ID is required');
-
-  const driveUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
-  proxyVideoStream(driveUrl, req, res, 'video/mp4');
-});
-
-// General Video Proxy Route (for external direct video URLs that require CORS/Range forwarding)
 app.get('/api/proxy-video', (req, res) => {
   const targetUrl = req.query.url;
   if (!targetUrl) return res.status(400).send('URL query parameter is required');
@@ -258,45 +415,35 @@ app.get('/api/room/:roomId', (req, res) => {
 app.post('/api/login', (req, res) => {
   const { roomId, player, password } = req.body;
   if (!roomId || !player || !password) {
-    return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ Mã phòng, Tên người chơi và Mật khẩu!' });
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin!' });
   }
 
   const room = rooms.get(String(roomId).trim());
   if (!room) {
-    return res.status(404).json({ success: false, message: 'Mã phòng không tồn tại hoặc đã hết hạn!' });
+    return res.status(404).json({ success: false, message: 'Mã phòng không tồn tại!' });
   }
 
-  const normalizedPlayer = String(player).toLowerCase().replace(/\s+/g, '');
-  let expectedPassword = '';
-  let targetFile = '';
-
-  if (normalizedPlayer === 'player1' || normalizedPlayer === '1') {
-    expectedPassword = room.passwords.player1;
-    targetFile = 'Player1.html';
-  } else if (normalizedPlayer === 'player2' || normalizedPlayer === '2') {
-    expectedPassword = room.passwords.player2;
-    targetFile = 'Player2.html';
-  } else if (normalizedPlayer === 'player3' || normalizedPlayer === '3') {
-    expectedPassword = room.passwords.player3;
-    targetFile = 'Player3.html';
-  } else {
-    return res.status(400).json({ success: false, message: 'Người chơi không hợp lệ (chọn Player 1, Player 2 hoặc Player 3)!' });
+  const expectedPass = room.passwords[player];
+  if (expectedPass && expectedPass === String(password).trim()) {
+    const fileMap = {
+      player1: 'Player1.html',
+      player2: 'Player2.html',
+      player3: 'Player3.html'
+    };
+    const targetFile = fileMap[player] || 'Player1.html';
+    return res.json({
+      success: true,
+      message: 'Đăng nhập thành công!',
+      roomId: room.roomId,
+      player,
+      targetUrl: `/${targetFile}?roomid=${room.roomId}&auth=${encodeURIComponent(password)}`
+    });
   }
 
-  if (String(password).trim() !== String(expectedPassword).trim()) {
-    return res.status(401).json({ success: false, message: 'Mật khẩu người chơi không chính xác!' });
-  }
-
-  res.json({
-    success: true,
-    message: 'Đăng nhập thành công!',
-    roomId: room.roomId,
-    player: normalizedPlayer,
-    targetUrl: `/${targetFile}?roomid=${room.roomId}&auth=${encodeURIComponent(expectedPassword)}`
-  });
+  return res.status(401).json({ success: false, message: 'Mật khẩu người chơi không đúng!' });
 });
 
-// Serve direct HTML files (supporting both uppercase and lowercase aliases)
+// HTML route handlers
 app.get(['/', '/index.html', '/Index.html', '/index', '/Index'], (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -324,7 +471,60 @@ app.get(['/Viewer.html', '/viewer.html', '/Viewer', '/viewer'], (req, res) => {
 // Serve static assets from root directory
 app.use(express.static(__dirname));
 
-// Socket.IO real-time synchronization
+// -------------------------------------------------------------
+// AUTHORITATIVE TIME CLOCK & SOCKET.IO REAL-TIME SYNC
+// Prevents tab-switch throttling from desyncing timers or videos
+// -------------------------------------------------------------
+
+// Periodic Authoritative Heartbeat Broadcaster (every 500ms)
+setInterval(() => {
+  const now = Date.now();
+  rooms.forEach((room, rId) => {
+    if (room.timer60s.isRunning || room.videoState.isPlaying) {
+      const elapsed = Math.max(0, (now - (room.videoState.startedAt || now)) / 1000);
+      const currentSeconds = Math.min(60, (room.videoState.startPosition || 0) + elapsed);
+      const secondsRemaining = Math.max(0, Math.ceil((room.timer60s.startRemaining || 60) - elapsed));
+
+      room.videoState.currentSeconds = currentSeconds;
+      room.timer60s.secondsRemaining = secondsRemaining;
+
+      if (secondsRemaining <= 0 || currentSeconds >= 60) {
+        // Auto finish at 60s
+        room.videoState.isPlaying = false;
+        room.videoState.startedAt = null;
+        room.videoState.currentSeconds = 60;
+        room.timer60s.isRunning = false;
+        room.timer60s.startedAt = null;
+        room.timer60s.secondsRemaining = 0;
+
+        io.to(`room-${rId}`).emit('video-action', {
+          action: 'pause',
+          currentTime: 60,
+          isPlaying: false,
+          timestamp: now
+        });
+        io.to(`room-${rId}`).emit('timer-action', {
+          action: 'finish',
+          secondsRemaining: 0,
+          isRunning: false,
+          timestamp: now
+        });
+      }
+
+      io.to(`room-${rId}`).emit('time-sync', {
+        serverTime: now,
+        isPlaying: room.videoState.isPlaying,
+        currentSeconds: room.videoState.currentSeconds,
+        isTimerRunning: room.timer60s.isRunning,
+        secondsRemaining: room.timer60s.secondsRemaining,
+        startedAt: room.videoState.startedAt,
+        startPosition: room.videoState.startPosition,
+        startRemaining: room.timer60s.startRemaining
+      });
+    }
+  });
+}, 500);
+
 io.on('connection', (socket) => {
   let currentRoomId = null;
   let currentRole = null;
@@ -348,6 +548,7 @@ io.on('connection', (socket) => {
     // Send full current state to newly joined client
     socket.emit('room-state', {
       roomId: room.roomId,
+      serverTime: Date.now(),
       passwords: currentRole === 'controller' ? room.passwords : undefined,
       topic1: room.topic1,
       topic2: room.topic2,
@@ -467,30 +668,46 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Controller plays videos (synchronous play for all 3 videos + 60s timer + clip bed music)
+  // Controller plays videos (synchronized play for all 3 videos + 60s countdown timer + clip bed music)
   socket.on('controller:play-videos', (data) => {
     if (!currentRoomId || !rooms.has(currentRoomId)) return;
     const room = rooms.get(currentRoomId);
-    const currentTime = typeof data?.currentTime === 'number' ? data.currentTime : room.videoState.currentTime;
+    const now = Date.now();
+    const currentTime = typeof data?.currentTime === 'number' ? data.currentTime : room.videoState.currentSeconds;
 
     room.videoState = {
       isPlaying: true,
-      currentTime: currentTime,
-      updatedAt: Date.now()
+      startedAt: now,
+      startPosition: currentTime,
+      currentSeconds: currentTime,
+      updatedAt: now
     };
+
+    if (room.timer60s.secondsRemaining <= 0) {
+      room.timer60s.secondsRemaining = 60;
+    }
+
     room.timer60s.isRunning = true;
-    room.timer60s.startedAt = Date.now();
+    room.timer60s.startedAt = now;
+    room.timer60s.startRemaining = room.timer60s.secondsRemaining;
 
     io.to(`room-${currentRoomId}`).emit('video-action', {
       action: 'play',
       currentTime: currentTime,
-      timestamp: Date.now()
+      startedAt: now,
+      startPosition: currentTime,
+      isPlaying: true,
+      serverTime: now,
+      timestamp: now
     });
     io.to(`room-${currentRoomId}`).emit('timer-action', {
       action: 'start',
       secondsRemaining: room.timer60s.secondsRemaining,
+      startRemaining: room.timer60s.startRemaining,
+      startedAt: now,
       isRunning: true,
-      timestamp: Date.now()
+      serverTime: now,
+      timestamp: now
     });
   });
 
@@ -498,25 +715,40 @@ io.on('connection', (socket) => {
   socket.on('controller:pause-videos', (data) => {
     if (!currentRoomId || !rooms.has(currentRoomId)) return;
     const room = rooms.get(currentRoomId);
-    const currentTime = typeof data?.currentTime === 'number' ? data.currentTime : room.videoState.currentTime;
+    const now = Date.now();
 
-    room.videoState = {
-      isPlaying: false,
-      currentTime: currentTime,
-      updatedAt: Date.now()
-    };
+    if (room.videoState.startedAt) {
+      const elapsed = (now - room.videoState.startedAt) / 1000;
+      room.videoState.currentSeconds = Math.min(60, (room.videoState.startPosition || 0) + elapsed);
+      room.timer60s.secondsRemaining = Math.max(0, Math.ceil((room.timer60s.startRemaining || 60) - elapsed));
+    }
+
+    if (typeof data?.currentTime === 'number') {
+      room.videoState.currentSeconds = data.currentTime;
+    }
+
+    room.videoState.isPlaying = false;
+    room.videoState.startedAt = null;
+    room.videoState.startPosition = room.videoState.currentSeconds;
+    room.videoState.updatedAt = now;
+
     room.timer60s.isRunning = false;
+    room.timer60s.startedAt = null;
+    room.timer60s.startRemaining = room.timer60s.secondsRemaining;
 
     io.to(`room-${currentRoomId}`).emit('video-action', {
       action: 'pause',
-      currentTime: currentTime,
-      timestamp: Date.now()
+      currentTime: room.videoState.currentSeconds,
+      isPlaying: false,
+      serverTime: now,
+      timestamp: now
     });
     io.to(`room-${currentRoomId}`).emit('timer-action', {
       action: 'pause',
       secondsRemaining: room.timer60s.secondsRemaining,
       isRunning: false,
-      timestamp: Date.now()
+      serverTime: now,
+      timestamp: now
     });
   });
 
@@ -524,24 +756,36 @@ io.on('connection', (socket) => {
   socket.on('controller:seek-videos', (data) => {
     if (!currentRoomId || !rooms.has(currentRoomId)) return;
     const room = rooms.get(currentRoomId);
+    const now = Date.now();
     const currentTime = typeof data?.currentTime === 'number' ? data.currentTime : 0;
 
-    room.videoState.currentTime = currentTime;
-    room.videoState.isPlaying = false;
-    room.videoState.updatedAt = Date.now();
-    room.timer60s.isRunning = false;
-    room.timer60s.secondsRemaining = 60;
+    room.videoState = {
+      isPlaying: false,
+      startedAt: null,
+      startPosition: currentTime,
+      currentSeconds: currentTime,
+      updatedAt: now
+    };
+    room.timer60s = {
+      isRunning: false,
+      startedAt: null,
+      startRemaining: 60,
+      secondsRemaining: 60
+    };
 
     io.to(`room-${currentRoomId}`).emit('video-action', {
       action: 'seek',
       currentTime: currentTime,
-      timestamp: Date.now()
+      isPlaying: false,
+      serverTime: now,
+      timestamp: now
     });
     io.to(`room-${currentRoomId}`).emit('timer-action', {
       action: 'reset',
       secondsRemaining: 60,
       isRunning: false,
-      timestamp: Date.now()
+      serverTime: now,
+      timestamp: now
     });
   });
 
@@ -549,32 +793,41 @@ io.on('connection', (socket) => {
   socket.on('controller:timer-action', (data) => {
     if (!currentRoomId || !rooms.has(currentRoomId)) return;
     const room = rooms.get(currentRoomId);
+    const now = Date.now();
     const action = data?.action; // 'start', 'pause', 'reset'
 
     if (action === 'start') {
       room.timer60s.isRunning = true;
-      room.timer60s.secondsRemaining = typeof data?.seconds === 'number' ? data.seconds : 60;
-      room.timer60s.startedAt = Date.now();
+      room.timer60s.startedAt = now;
+      room.timer60s.startRemaining = typeof data?.seconds === 'number' ? data.seconds : (room.timer60s.secondsRemaining || 60);
+      room.timer60s.secondsRemaining = room.timer60s.startRemaining;
+
       room.videoState.isPlaying = true;
+      room.videoState.startedAt = now;
+      room.videoState.startPosition = room.videoState.currentSeconds;
     } else if (action === 'pause') {
-      room.timer60s.isRunning = false;
-      if (typeof data?.seconds === 'number') {
-        room.timer60s.secondsRemaining = data.seconds;
+      if (room.timer60s.startedAt) {
+        const elapsed = (now - room.timer60s.startedAt) / 1000;
+        room.timer60s.secondsRemaining = Math.max(0, Math.ceil(room.timer60s.startRemaining - elapsed));
+        room.videoState.currentSeconds = Math.min(60, room.videoState.startPosition + elapsed);
       }
-      room.videoState.isPlaying = false;
-    } else if (action === 'reset') {
       room.timer60s.isRunning = false;
-      room.timer60s.secondsRemaining = 60;
       room.timer60s.startedAt = null;
       room.videoState.isPlaying = false;
-      room.videoState.currentTime = 0;
+      room.videoState.startedAt = null;
+    } else if (action === 'reset') {
+      room.timer60s = { isRunning: false, startedAt: null, startRemaining: 60, secondsRemaining: 60 };
+      room.videoState = { isPlaying: false, startedAt: null, startPosition: 0, currentSeconds: 0, updatedAt: now };
     }
 
     io.to(`room-${currentRoomId}`).emit('timer-action', {
       action,
       secondsRemaining: room.timer60s.secondsRemaining,
       isRunning: room.timer60s.isRunning,
-      timestamp: Date.now()
+      startedAt: room.timer60s.startedAt,
+      startRemaining: room.timer60s.startRemaining,
+      serverTime: now,
+      timestamp: now
     });
   });
 
@@ -584,6 +837,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoomId);
     socket.emit('room-state', {
       roomId: room.roomId,
+      serverTime: Date.now(),
       passwords: currentRole === 'controller' ? room.passwords : undefined,
       topic1: room.topic1,
       topic2: room.topic2,

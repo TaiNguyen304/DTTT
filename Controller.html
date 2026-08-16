@@ -1075,10 +1075,15 @@
     let socket = null;
     let currentRoomId = '123456';
     let roomData = null;
-    let timerInterval = null;
-    let secondsLeft = 60;
     let topicVisibility = { 1: false, 2: false, 3: false };
-    let isVideoPlaying = false;
+    let syncClock = null;
+
+    function formatMinSec(seconds) {
+      const cur = Math.max(0, Math.floor(seconds || 0));
+      const mins = String(Math.floor(cur / 60)).padStart(2, '0');
+      const secs = String(cur % 60).padStart(2, '0');
+      return `${mins}:${secs}`;
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -1086,6 +1091,46 @@
       if (roomParam && roomParam.length === 6) {
         currentRoomId = roomParam;
       }
+
+      const v1 = document.getElementById('previewVideoEl1');
+      const v2 = document.getElementById('previewVideoEl2');
+      const v3 = document.getElementById('previewVideoEl3');
+      if (v1) v1.muted = true;
+      if (v2) v2.muted = true;
+      if (v3) v3.muted = true;
+
+      syncClock = new window.UniversalSyncClock({
+        videoElements: [v1, v2, v3],
+        isMutedVideo: true,
+        onTick: (state) => {
+          const displaySec = `${state.secondsRemaining}s`;
+          const timerEl = document.getElementById('controllerTimerDisplay');
+          if (timerEl && timerEl.innerText !== displaySec) {
+            timerEl.innerText = displaySec;
+          }
+
+          const timeEl = document.getElementById('previewVideoTime');
+          if (timeEl) {
+            timeEl.innerText = formatMinSec(state.videoTime);
+          }
+
+          const statusText = document.getElementById('timerStatusText');
+          if (statusText) {
+            if (state.isTimerRunning) {
+              statusText.innerText = '(Đang đếm ngược)';
+            } else if (state.secondsRemaining === 0) {
+              statusText.innerText = '(Hết giờ 60s!)';
+            } else if (state.secondsRemaining === 60) {
+              statusText.innerText = '(Sẵn sàng 60s)';
+            } else {
+              statusText.innerText = '(Tạm dừng)';
+            }
+          }
+        },
+        onFinish: () => {
+          showToast('Đã kết thúc 60s!', 'info');
+        }
+      });
 
       initSocket();
       updateRoomDisplay();
@@ -1138,11 +1183,20 @@
       });
 
       socket.on('video-action', (data) => {
-        handleVideoAction(data);
+        if (data.action === 'play') syncClock.start(data);
+        else if (data.action === 'pause') syncClock.pause(data);
+        else if (data.action === 'seek') syncClock.reset(data);
       });
 
       socket.on('timer-action', (data) => {
-        handleTimerAction(data);
+        if (data.action === 'start') syncClock.start(data);
+        else if (data.action === 'pause') syncClock.pause(data);
+        else if (data.action === 'reset') syncClock.reset(data);
+        else if (data.action === 'finish') syncClock.pause({ secondsRemaining: 0, currentTime: 60 });
+      });
+
+      socket.on('time-sync', (data) => {
+        if (syncClock) syncClock.sync(data);
       });
     }
 
@@ -1173,11 +1227,14 @@
 
       loadPreviewVideos(state.video1Url, state.video2Url, state.video3Url);
 
-      if (state.timer60s) {
-        handleTimerAction(state.timer60s);
-      }
-      if (state.videoState) {
-        handleVideoAction(state.videoState);
+      if (syncClock) {
+        syncClock.sync({
+          serverTime: state.serverTime,
+          isPlaying: state.videoState?.isPlaying,
+          isTimerRunning: state.timer60s?.isRunning,
+          currentSeconds: state.videoState?.currentSeconds || state.videoState?.currentTime,
+          secondsRemaining: state.timer60s?.secondsRemaining
+        });
       }
     }
 
@@ -1402,59 +1459,27 @@
 
     // VIDEO & 60s TIMER SYNCHRONOUS PLAYBACK
     function triggerPlayVideos() {
-      const v1 = document.getElementById('previewVideoEl1');
-      const time = (v1 && !isNaN(v1.currentTime)) ? v1.currentTime : 0;
-      
-      const v2 = document.getElementById('previewVideoEl2');
-      const v3 = document.getElementById('previewVideoEl3');
-      
-      if (v1) { v1.muted = true; v1.play().catch(()=>{}); }
-      if (v2) { v2.muted = true; v2.play().catch(()=>{}); }
-      if (v3) { v3.muted = true; v3.play().catch(()=>{}); }
-
-      isVideoPlaying = true;
-
-      // Start 60s Countdown Timer
-      startTimer60s();
-
-      // Emit play to all connected players & viewers (they will play video & Clip bed audio)
-      socket.emit('controller:play-videos', { currentTime: time });
+      const curTime = syncClock ? syncClock.currentVideoTime : 0;
+      if (syncClock) {
+        syncClock.start({ currentTime: curTime });
+      }
+      socket.emit('controller:play-videos', { currentTime: curTime });
       showToast('Đang phát 3 Video & Đếm ngược 60s trên tất cả Player & Viewer!', 'success');
     }
 
     function triggerPauseVideos() {
-      const v1 = document.getElementById('previewVideoEl1');
-      const time = (v1 && !isNaN(v1.currentTime)) ? v1.currentTime : 0;
-
-      if (document.getElementById('previewVideoEl1')) document.getElementById('previewVideoEl1').pause();
-      if (document.getElementById('previewVideoEl2')) document.getElementById('previewVideoEl2').pause();
-      if (document.getElementById('previewVideoEl3')) document.getElementById('previewVideoEl3').pause();
-
-      isVideoPlaying = false;
-
-      // Pause 60s Countdown Timer
-      pauseTimer60s();
-
-      // Emit pause to all connected players & viewers
-      socket.emit('controller:pause-videos', { currentTime: time });
+      const curTime = syncClock ? syncClock.currentVideoTime : 0;
+      if (syncClock) {
+        syncClock.pause({ currentTime: curTime });
+      }
+      socket.emit('controller:pause-videos', { currentTime: curTime });
       showToast('Đã tạm dừng Video và Đồng hồ đếm ngược!', 'info');
     }
 
     function triggerResetVideos() {
-      const v1 = document.getElementById('previewVideoEl1');
-      const v2 = document.getElementById('previewVideoEl2');
-      const v3 = document.getElementById('previewVideoEl3');
-
-      if (v1) { v1.currentTime = 0; v1.pause(); }
-      if (v2) { v2.currentTime = 0; v2.pause(); }
-      if (v3) { v3.currentTime = 0; v3.pause(); }
-
-      isVideoPlaying = false;
-
-      // Reset 60s Countdown Timer
-      resetTimer60s();
-
-      // Emit reset to all connected players & viewers
+      if (syncClock) {
+        syncClock.reset();
+      }
       socket.emit('controller:seek-videos', { currentTime: 0 });
       showToast('Đã đặt lại Video về 00:00 và Đồng hồ về 60s!', 'info');
     }
