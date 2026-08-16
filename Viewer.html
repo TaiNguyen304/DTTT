@@ -549,29 +549,41 @@
     <!-- 3. HÀNG 3 KHUNG HÌNH CHỮ NHẬT TƯƠNG ỨNG 3 VIDEO (KHÔNG CÓ SHAPE CHE) -->
     <div class="section-row">
       <div class="section-label-bar">
-        <span>3 Khung Hình Video Trực Tiếp (Khán Giả Xem Toàn Cảnh)</span>
-        <span style="font-size: 11px; color: #e9d5ff; background: rgba(59, 7, 100, 0.8); padding: 2px 8px; border-radius: 4px; border: 1px solid #7e22ce;">
-          Xem đồng thời cả 3 Video (Không bị che)
-        </span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>3 Khung Hình Video Trực Tiếp (Khán Giả Xem Toàn Cảnh)</span>
+          <span style="font-size: 11px; color: #e9d5ff; background: rgba(59, 7, 100, 0.8); padding: 2px 8px; border-radius: 4px; border: 1px solid #7e22ce;">
+            Xem đồng thời cả 3 Video
+          </span>
+        </div>
+
+        <!-- Audio Source Selector for Viewer -->
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+          <span style="color: #cbd5e1;"><i class="fa-solid fa-volume-high"></i> Âm thanh:</span>
+          <button id="audioBtnAll" onclick="setViewerAudio('all')" class="btn" style="padding: 3px 8px; font-size: 11px; border-radius: 6px; background: #0284c7; color: #fff; border: 1px solid #38bdf8;">Tất Cả</button>
+          <button id="audioBtn1" onclick="setViewerAudio('1')" class="btn" style="padding: 3px 8px; font-size: 11px; border-radius: 6px; background: #991b1b; color: #fff; border: 1px solid #ef4444;">Video 1</button>
+          <button id="audioBtn2" onclick="setViewerAudio('2')" class="btn" style="padding: 3px 8px; font-size: 11px; border-radius: 6px; background: #92400e; color: #fff; border: 1px solid #f59e0b;">Video 2</button>
+          <button id="audioBtn3" onclick="setViewerAudio('3')" class="btn" style="padding: 3px 8px; font-size: 11px; border-radius: 6px; background: #1e40af; color: #fff; border: 1px solid #3b82f6;">Video 3</button>
+          <button id="audioBtnMute" onclick="setViewerAudio('mute')" class="btn" style="padding: 3px 8px; font-size: 11px; border-radius: 6px; background: #334155; color: #94a3b8; border: 1px solid #475569;">Tắt tiếng</button>
+        </div>
       </div>
 
       <div class="grid-3">
         
         <!-- KHUNG 1: VIDEO 1 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-red">
-          <video id="videoEl1" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
+          <video id="videoEl1" playsinline preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           <div class="video-label-badge red">Video 1 (Đỏ)</div>
         </div>
 
         <!-- KHUNG 2: VIDEO 2 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-yellow">
-          <video id="videoEl2" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
+          <video id="videoEl2" playsinline preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           <div class="video-label-badge yellow">Video 2 (Vàng)</div>
         </div>
 
         <!-- KHUNG 3: VIDEO 3 (KHÔNG SHAPE) -->
         <div class="viewer-video-frame border-blue">
-          <video id="videoEl3" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
+          <video id="videoEl3" playsinline preload="auto" style="width: 100%; height: 100%; object-fit: contain;"></video>
           <div class="video-label-badge blue">Video 3 (Xanh)</div>
         </div>
 
@@ -627,6 +639,46 @@
     let currentRoomId = '123456';
     let syncClock = null;
 
+    let currentAudioMode = '1';
+
+    function setViewerAudio(mode) {
+      currentAudioMode = mode;
+      const v1 = document.getElementById('videoEl1');
+      const v2 = document.getElementById('videoEl2');
+      const v3 = document.getElementById('videoEl3');
+
+      // Update button styles
+      ['All', '1', '2', '3', 'Mute'].forEach(key => {
+        const btn = document.getElementById(`audioBtn${key}`);
+        if (btn) {
+          btn.style.opacity = (key.toLowerCase() === mode.toLowerCase() || (key === 'All' && mode === 'all')) ? '1' : '0.5';
+          btn.style.transform = (key.toLowerCase() === mode.toLowerCase() || (key === 'All' && mode === 'all')) ? 'scale(1.05)' : 'scale(1)';
+        }
+      });
+
+      if (mode === 'all') {
+        if (v1) { v1.muted = false; v1.volume = 0.7; }
+        if (v2) { v2.muted = false; v2.volume = 0.7; }
+        if (v3) { v3.muted = false; v3.volume = 0.7; }
+      } else if (mode === '1') {
+        if (v1) { v1.muted = false; v1.volume = 1.0; }
+        if (v2) { v2.muted = true; }
+        if (v3) { v3.muted = true; }
+      } else if (mode === '2') {
+        if (v1) { v1.muted = true; }
+        if (v2) { v2.muted = false; v2.volume = 1.0; }
+        if (v3) { v3.muted = true; }
+      } else if (mode === '3') {
+        if (v1) { v1.muted = true; }
+        if (v2) { v2.muted = true; }
+        if (v3) { v3.muted = false; v3.volume = 1.0; }
+      } else if (mode === 'mute') {
+        if (v1) v1.muted = true;
+        if (v2) v2.muted = true;
+        if (v3) v3.muted = true;
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const roomParam = urlParams.get('roomid') || urlParams.get('room');
@@ -643,7 +695,7 @@
 
       syncClock = new window.UniversalSyncClock({
         videoElements: [v1, v2, v3],
-        isMutedVideo: true,
+        isMutedVideo: false,
         onTick: (state) => {
           updateTimerDisplay(state.secondsRemaining);
           const stateEl = document.getElementById('globalTimerState');
@@ -661,10 +713,12 @@
 
       initSocket();
       initAudioUnlockListener();
+      setViewerAudio('1');
     });
 
     function unlockAudio() {
       window.soundEngine.init();
+      setViewerAudio(currentAudioMode);
       const banner = document.getElementById('audioUnlockBanner');
       if (banner) banner.classList.add('hidden');
     }

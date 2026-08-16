@@ -34,11 +34,11 @@ app.use(express.urlencoded({ extended: true }));
 // Default demo topics and video links
 const DEFAULT_DEMO = {
   topic1: 'Chủ đề 1',
-  video1Url: 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=drive_link',
+  video1Url: 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=sharing',
   topic2: 'Chủ đề 2',
-  video2Url: 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=drive_link',
+  video2Url: 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=sharing',
   topic3: 'Chủ đề 3',
-  video3Url: 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=drive_link',
+  video3Url: 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=sharing',
   themeAudioUrl: 'The Master Of Minds - Category.mp3',
   audio5sUrl: 'The Master Of Minds - 5s CountDown.mp3',
   audio3sUrl: '3s.mp3',
@@ -128,18 +128,18 @@ const activeTranscodes = new Map();
 
 function extractDriveFileId(url) {
   if (!url) return null;
-  url = String(url).trim();
+  url = String(url).trim().replace(/^['"`]|['"`]$/g, '');
   if (url.startsWith('/api/drive-video/')) {
-    return url.replace('/api/drive-video/', '').split('?')[0].trim();
+    return url.replace('/api/drive-video/', '').split('?')[0].split('/')[0].trim();
   }
 
   const drivePatterns = [
     /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
-    /drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
-    /drive\.google\.com\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
-    /drive\.usercontent\.google\.com\/download\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.usercontent\.google\.com\/(?:download|uc)\?(?:[^#]*&)?id=([a-zA-Z0-9_-]+)/i,
     /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i,
-    /docs\.google\.com\/(?:file\/d\/|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i
+    /docs\.google\.com\/(?:file\/d\/|uc\?(?:[^#]*&)?id=)([a-zA-Z0-9_-]+)/i,
+    /[?&]id=([a-zA-Z0-9_-]{25,60})/i
   ];
 
   for (const p of drivePatterns) {
@@ -261,9 +261,9 @@ async function ensureH264Video(fileId) {
     });
 
     if (isH264) {
-      console.log(`[VideoEngine] File ${fileId} is already H.264. Optimizing faststart...`);
+      console.log(`[VideoEngine] File ${fileId} is already H.264. Ensuring standard AAC audio & faststart...`);
       await new Promise((resolve) => {
-        const ff = spawn('ffmpeg', ['-y', '-i', rawFilePath, '-c', 'copy', '-movflags', '+faststart', targetFilePath]);
+        const ff = spawn('ffmpeg', ['-y', '-i', rawFilePath, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-movflags', '+faststart', targetFilePath]);
         ff.on('close', () => {
           try { fs.unlinkSync(rawFilePath); } catch (e) {}
           resolve();
@@ -274,7 +274,7 @@ async function ensureH264Video(fileId) {
         });
       });
     } else {
-      console.log(`[VideoEngine] Transcoding ${fileId} (HEVC/H.265) to web-standard H.264 with ultrafast preset...`);
+      console.log(`[VideoEngine] Transcoding ${fileId} (HEVC/H.265) to web-standard H.264 + AAC stereo with ultrafast preset...`);
       await new Promise((resolve, reject) => {
         const ff = spawn('ffmpeg', [
           '-y',
@@ -283,7 +283,9 @@ async function ensureH264Video(fileId) {
           '-preset', 'ultrafast',
           '-crf', '23',
           '-pix_fmt', 'yuv420p',
-          '-c:a', 'copy',
+          '-c:a', 'aac',
+          '-b:a', '192k',
+          '-ar', '44100',
           '-movflags', '+faststart',
           targetFilePath
         ]);

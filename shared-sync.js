@@ -41,17 +41,20 @@
 // Helper to convert Google Drive link to streaming direct URL (which streams web-standard H.264)
 function formatVideoUrl(url) {
   if (!url) return '';
-  url = String(url).trim();
+  url = String(url).trim().replace(/^['"`]|['"`]$/g, '');
   
-  if (url.startsWith('/api/drive-video/')) return url;
+  if (url.startsWith('/api/drive-video/')) {
+    return url;
+  }
 
+  // Handle all Google Drive link variations including /file/d/{id}/view?usp=sharing
   const drivePatterns = [
     /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
-    /drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
-    /drive\.google\.com\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
-    /drive\.usercontent\.google\.com\/download\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.usercontent\.google\.com\/(?:download|uc)\?(?:[^#]*&)?id=([a-zA-Z0-9_-]+)/i,
     /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i,
-    /docs\.google\.com\/(?:file\/d\/|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i
+    /docs\.google\.com\/(?:file\/d\/|uc\?(?:[^#]*&)?id=)([a-zA-Z0-9_-]+)/i,
+    /[?&]id=([a-zA-Z0-9_-]{25,60})/i
   ];
 
   for (const pattern of drivePatterns) {
@@ -61,6 +64,7 @@ function formatVideoUrl(url) {
     }
   }
 
+  // Direct Drive File ID
   if (/^[a-zA-Z0-9_-]{25,60}$/.test(url)) {
     return `/api/drive-video/${url}`;
   }
@@ -79,8 +83,18 @@ function attachVideoSafely(videoEl, rawUrl) {
   }
 
   videoEl.playsInline = true;
-  videoEl.muted = true;
   videoEl.preload = 'auto';
+
+  // Nudge first frame when metadata is loaded so it never appears as a blank/black frame
+  const onLoaded = () => {
+    if (videoEl.paused && videoEl.currentTime < 0.05) {
+      try {
+        videoEl.currentTime = 0.05;
+      } catch (e) {}
+    }
+  };
+  videoEl.addEventListener('loadeddata', onLoaded, { once: true });
+  videoEl.addEventListener('loadedmetadata', onLoaded, { once: true });
 
   if (videoEl.src !== targetUrl && !videoEl.src.endsWith(targetUrl)) {
     videoEl.src = targetUrl;
@@ -108,6 +122,9 @@ function attachVideoSafely(videoEl, rawUrl) {
 
     videoEl.addEventListener('canplay', () => {
       retryCount = 0;
+      if (videoEl.paused && videoEl.currentTime < 0.05) {
+        try { videoEl.currentTime = 0.05; } catch (e) {}
+      }
     });
   }
 }
@@ -494,7 +511,6 @@ class UniversalSyncClock {
         } catch (e) {}
       } else if (playing && absDiff > 0.04) {
         // Micro-nudge playback rate (broadcast precision sync within 1 frame)
-        // If video is slightly ahead, slow down slightly; if behind, speed up slightly
         if (diff > 0) {
           v.playbackRate = 0.95;
         } else {
@@ -510,7 +526,9 @@ class UniversalSyncClock {
         if (v.paused) {
           const playPromise = v.play();
           if (playPromise !== undefined) {
-            playPromise.catch(() => {
+            playPromise.catch((err) => {
+              // If unmuted playback is blocked by browser autoplay policy, fallback to muted play so visual displays immediately
+              console.warn('[SyncClock] Unmuted play blocked by browser, falling back to muted autoplay:', err.message);
               v.muted = true;
               v.play().catch(() => {});
             });

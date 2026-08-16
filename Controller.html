@@ -767,7 +767,7 @@
           </div>
           <div>
             <label class="input-label">Link Video 1 (Google Drive / MP4):</label>
-            <input type="text" id="inputVideo1" value="https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=drive_link" class="form-input font-mono" />
+            <input type="text" id="inputVideo1" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" value="https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=sharing" class="form-input font-mono" />
           </div>
         </div>
 
@@ -783,7 +783,7 @@
           </div>
           <div>
             <label class="input-label">Link Video 2 (Google Drive / MP4):</label>
-            <input type="text" id="inputVideo2" value="https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=drive_link" class="form-input font-mono" />
+            <input type="text" id="inputVideo2" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" value="https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=sharing" class="form-input font-mono" />
           </div>
         </div>
 
@@ -799,7 +799,7 @@
           </div>
           <div>
             <label class="input-label">Link Video 3 (Google Drive / MP4):</label>
-            <input type="text" id="inputVideo3" value="https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=drive_link" class="form-input font-mono" />
+            <input type="text" id="inputVideo3" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" value="https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=sharing" class="form-input font-mono" />
           </div>
         </div>
 
@@ -1128,6 +1128,11 @@
 
       initSocket();
       updateRoomDisplay();
+      loadPreviewVideos(
+        document.getElementById('inputVideo1').value.trim(),
+        document.getElementById('inputVideo2').value.trim(),
+        document.getElementById('inputVideo3').value.trim()
+      );
     });
 
     function initSocket() {
@@ -1631,11 +1636,11 @@
 
     function loadDefaultDemoData() {
       document.getElementById('inputTopic1').value = 'Chủ đề 1';
-      document.getElementById('inputVideo1').value = 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=drive_link';
+      document.getElementById('inputVideo1').value = 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=sharing';
       document.getElementById('inputTopic2').value = 'Chủ đề 2';
-      document.getElementById('inputVideo2').value = 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=drive_link';
+      document.getElementById('inputVideo2').value = 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=sharing';
       document.getElementById('inputTopic3').value = 'Chủ đề 3';
-      document.getElementById('inputVideo3').value = 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=drive_link';
+      document.getElementById('inputVideo3').value = 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=sharing';
 
       saveAndSyncLinks();
       showToast('Đã nạp link Google Drive mẫu chuẩn theo form đề thi!', 'info');
@@ -1728,9 +1733,9 @@
     function downloadExcelTemplate() {
       const wsData = [
         ['Số chủ đề', 'Tên chủ đề', 'Link video'],
-        [1, document.getElementById('inputTopic1').value || 'Chủ đề 1', document.getElementById('inputVideo1').value || 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=drive_link'],
-        [2, document.getElementById('inputTopic2').value || 'Chủ đề 2', document.getElementById('inputVideo2').value || 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=drive_link'],
-        [3, document.getElementById('inputTopic3').value || 'Chủ đề 3', document.getElementById('inputVideo3').value || 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=drive_link']
+        [1, document.getElementById('inputTopic1').value || 'Chủ đề 1', document.getElementById('inputVideo1').value || 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=sharing'],
+        [2, document.getElementById('inputTopic2').value || 'Chủ đề 2', document.getElementById('inputVideo2').value || 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=sharing'],
+        [3, document.getElementById('inputTopic3').value || 'Chủ đề 3', document.getElementById('inputVideo3').value || 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=sharing']
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(wsData);
