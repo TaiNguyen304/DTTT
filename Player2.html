@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Player 2 - Game Show Arena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cabinet+Grotesk:wght@700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+  <style>
+    /* Requirement 1: Global font-weight: bold !important in * */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-weight: bold !important;
+    }
+
+    /* Requirement 2 & 3: Standard CSS and Navy Blue Theme */
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(135deg, #071329 0%, #0b1d3a 50%, #0f2744 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .font-display { font-family: 'Cabinet Grotesk', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Top Header Bar */
+    .player-header {
+      width: 100%;
+      background: #d97706; /* Player 2: Yellow / Amber */
+      color: #0f172a;
+      padding: 12px 20px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+      border-bottom: 2px solid #b45309;
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .player-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .player-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #000;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .player-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .player-title-row h1 {
+      font-size: 22px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #000000;
+    }
+
+    .badge-player-tag {
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 10px;
+      background: #000000;
+      color: #fbbf24;
+      text-transform: uppercase;
+    }
+
+    .player-subtitle {
+      font-size: 12px;
+      color: #451a03;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .room-badge {
+      background: rgba(69, 26, 3, 0.8);
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(254, 240, 138, 0.3);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #fff;
+    }
+
+    .status-badge {
+      background: rgba(0, 0, 0, 0.2);
+      color: #000;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      animation: pulseAnim 1.5s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Audio Banner */
+    .audio-banner {
+      cursor: pointer;
+      background: linear-gradient(90deg, #d97706, #b45309);
+      color: #ffffff;
+      font-size: 12px;
+      padding: 8px 16px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .audio-banner.hidden {
+      display: none;
+    }
+
+    /* Main Container */
+    .arena-main {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .section-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .section-label-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0 4px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    /* Topic Boxes */
+    .topic-box {
+      position: relative;
+      border-radius: 14px;
+      padding: 16px;
+      background: #0a1c36;
+      border: 2px solid #1e3d6b;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 95px;
+      transition: all 0.3s ease;
+    }
+
+    .topic-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .topic-text {
+      font-size: 15px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topic-box.active-1 {
+      background: #3b0712;
+      border-color: #f43f5e;
+    }
+    .topic-box.active-1 .topic-text {
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .topic-box.active-2 {
+      background: #361a04;
+      border-color: #f59e0b;
+    }
+    .topic-box.active-2 .topic-text {
+      color: #fef08a;
+      font-size: 16px;
+    }
+
+    .topic-box.active-3 {
+      background: #081d3e;
+      border-color: #3b82f6;
+    }
+    .topic-box.active-3 .topic-text {
+      color: #bfdbfe;
+      font-size: 16px;
+    }
+
+    /* Timers */
+    .timer-card {
+      border-radius: 14px;
+      background: #0a1c36;
+      border: 1.5px solid #1e3d6b;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .timer-digits {
+      font-size: 36px;
+      color: #ffffff;
+    }
+
+    .timer-digits.warning {
+      color: #f43f5e;
+      animation: pulseAnim 1s infinite;
+    }
+
+    /* Video & Shape Containers */
+    .video-frame-box {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000000;
+      border: 2.5px solid #1e3d6b;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .video-frame-box.border-red { border-color: #dc2626; }
+    .video-frame-box.border-yellow { border-color: #d97706; }
+    .video-frame-box.border-blue { border-color: #2563eb; }
+
+    .video-frame-box video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Shape Overlays */
+    .shape-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+    }
+
+    .shape-overlay.shape-closed {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    .shape-overlay.shape-opened {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+    }
+
+    .shape-red {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #7f1d1d 100%);
+      color: #ffffff;
+    }
+
+    .shape-yellow {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #78350f 100%);
+      color: #0f172a;
+    }
+
+    .shape-blue {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e1b4b 100%);
+      color: #ffffff;
+    }
+
+    .shape-icon-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .shape-yellow .shape-icon-wrap {
+      background: rgba(0, 0, 0, 0.2);
+      color: #000;
+    }
+
+    .shape-title {
+      font-size: 18px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .shape-hint {
+      font-size: 11px;
+      margin-top: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.35);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .shape-yellow .shape-hint {
+      background: rgba(255, 255, 255, 0.5);
+      color: #451a03;
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    /* Close Button on Opened Video */
+    .shape-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 20;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+      font-size: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(5px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: all 0.2s;
+    }
+
+    .shape-close-btn.hidden {
+      display: none;
+    }
+
+    /* Requirement 5: Hover orange & bold white on all buttons */
+    button:hover,
+    .btn:hover,
+    .shape-close-btn:hover {
+      background: #ea580c !important;
+      background-color: #ea580c !important;
+      border-color: #ea580c !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 16px rgba(234, 88, 12, 0.5) !important;
+    }
+
+    /* Footer */
+    .player-footer {
+      width: 100%;
+      background: #08162b;
+      border-top: 1.5px solid #1e3d6b;
+      color: #64748b;
+      padding: 10px 20px;
+      font-size: 12px;
+    }
+
+    .footer-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP COLORED BAR (PLAYER 2: YELLOW) -->
+  <header class="player-header">
+    <div class="header-inner">
+      
+      <!-- Player Name & Identity -->
+      <div class="player-profile">
+        <div class="player-avatar font-display">2</div>
+        <div>
+          <div class="player-title-row">
+            <h1 class="font-display">PLAYER 2</h1>
+            <span class="badge-player-tag">Đội Vàng</span>
+          </div>
+          <p class="player-subtitle">Bàn Thi Đấu Trực Tuyến</p>
+        </div>
+      </div>
+
+      <!-- Room Code & Status -->
+      <div class="header-right">
+        <div class="room-badge">
+          <span style="color: #fef08a; font-size: 12px;">Mã Phòng:</span>
+          <span id="headerRoomId" class="font-mono" style="color: #ffffff; font-size: 15px;">123456</span>
+        </div>
+        <div id="connectionBadge" class="status-badge">
+          <span class="pulse-dot"></span>
+          <span>Đã Kết Nối</span>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Audio Unlock Banner -->
+  <div id="audioUnlockBanner" onclick="unlockAudio()" class="audio-banner">
+    <i class="fa-solid fa-volume-high"></i>
+    <span>Âm thanh đang bật. Bấm vào bất kỳ đâu trên màn hình để sẵn sàng nghe nhạc hiệu & video!</span>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <main class="arena-main">
+
+    <!-- 1. HÀNG 3 Ô CHỮ NHẬT ỨNG VỚI 3 CHỦ ĐỀ -->
+    <div class="section-row">
+      <div class="section-label-bar">
+        <span>3 Chủ Đề Vòng Thi</span>
+        <span style="font-size: 11px; color: #64748b;">(Mở theo hiệu lệnh của Quản Trò)</span>
+      </div>
+      
+      <div class="grid-3">
+        
+        <!-- Chủ Đề 1 Box -->
+        <div id="topicBox1" class="topic-box">
+          <div class="topic-tag" style="color: #f87171;">Chủ Đề 1</div>
+          <div id="topicText1" class="topic-text font-display">
+            <i class="fa-solid fa-lock" style="font-size: 12px; color: #ef4444;"></i>
+            <span>[ Đang Khóa ]</span>
+          </div>
+        </div>
+
+        <!-- Chủ Đề 2 Box -->
+        <div id="topicBox2" class="topic-box">
+          <div class="topic-tag" style="color: #fbbf24;">Chủ Đề 2</div>
+          <div id="topicText2" class="topic-text font-display">
+            <i class="fa-solid fa-lock" style="font-size: 12px; color: #f59e0b;"></i>
+            <span>[ Đang Khóa ]</span>
+          </div>
+        </div>
+
+        <!-- Chủ Đề 3 Box -->
+        <div id="topicBox3" class="topic-box">
+          <div class="topic-tag" style="color: #60a5fa;">Chủ Đề 3</div>
+          <div id="topicText3" class="topic-text font-display">
+            <i class="fa-solid fa-lock" style="font-size: 12px; color: #3b82f6;"></i>
+            <span>[ Đang Khóa ]</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2. HÀNG 3 ĐỒNG HỒ ĐẾM NGƯỢC 60S -->
+    <div class="section-row">
+      <div class="section-label-bar">
+        <span>3 Đồng Hồ Đếm Ngược 60 Giây</span>
+        <span id="globalTimerState" style="font-size: 11px; color: #64748b;">Đồng bộ</span>
+      </div>
+
+      <div class="grid-3">
+        
+        <!-- Timer 1 -->
+        <div class="timer-card">
+          <div>
+            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">Thời Gian 1</div>
+            <div style="font-size: 12px; color: #64748b;">Đếm ngược</div>
+          </div>
+          <div id="timerDisplay1" class="font-mono timer-digits">60s</div>
+        </div>
+
+        <!-- Timer 2 -->
+        <div class="timer-card">
+          <div>
+            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">Thời Gian 2</div>
+            <div style="font-size: 12px; color: #64748b;">Đếm ngược</div>
+          </div>
+          <div id="timerDisplay2" class="font-mono timer-digits">60s</div>
+        </div>
+
+        <!-- Timer 3 -->
+        <div class="timer-card">
+          <div>
+            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">Thời Gian 3</div>
+            <div style="font-size: 12px; color: #64748b;">Đếm ngược</div>
+          </div>
+          <div id="timerDisplay3" class="font-mono timer-digits">60s</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 3. HÀNG 3 KHUNG HÌNH CHỮ NHẬT TƯƠNG ỨNG 3 VIDEO CÓ 3 SHAPE CHE -->
+    <div class="section-row">
+      <div class="section-label-bar">
+        <span>3 Khung Hình Video & Shape Che</span>
+        <span style="font-size: 11px; color: #fbbf24; background: rgba(69, 26, 3, 0.8); padding: 2px 8px; border-radius: 4px; border: 1px solid #b45309;">
+          Chỉ được mở tối đa 1 khung hình cùng lúc (Ít nhất 2 shape che)
+        </span>
+      </div>
+
+      <div class="grid-3">
+        
+        <!-- KHUNG 1: VIDEO 1 + SHAPE ĐỎ -->
+        <div class="video-frame-box border-red">
+          <video id="videoEl1" playsinline preload="auto">
+            <source id="source1" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4">
+          </video>
+
+          <!-- SHAPE ĐỎ -->
+          <div id="shape1" onclick="handleShapeClick(1)" class="shape-overlay shape-red shape-closed">
+            <div class="shape-icon-wrap">
+              <i class="fa-solid fa-eye-slash" id="shapeIcon1"></i>
+            </div>
+            <div class="shape-title font-display">SHAPE ĐỎ</div>
+            <div class="shape-hint">Nhấn để mở khung hình 1</div>
+          </div>
+
+          <button id="closeBtn1" onclick="handleShapeClick(1)" class="shape-close-btn hidden">
+            <i class="fa-solid fa-eye-slash" style="color: #f87171;"></i>
+            <span>Đóng Shape Đỏ</span>
+          </button>
+        </div>
+
+        <!-- KHUNG 2: VIDEO 2 + SHAPE VÀNG -->
+        <div class="video-frame-box border-yellow">
+          <video id="videoEl2" playsinline preload="auto">
+            <source id="source2" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4">
+          </video>
+
+          <!-- SHAPE VÀNG -->
+          <div id="shape2" onclick="handleShapeClick(2)" class="shape-overlay shape-yellow shape-closed">
+            <div class="shape-icon-wrap">
+              <i class="fa-solid fa-eye-slash" id="shapeIcon2"></i>
+            </div>
+            <div class="shape-title font-display">SHAPE VÀNG</div>
+            <div class="shape-hint">Nhấn để mở khung hình 2</div>
+          </div>
+
+          <button id="closeBtn2" onclick="handleShapeClick(2)" class="shape-close-btn hidden">
+            <i class="fa-solid fa-eye-slash" style="color: #fbbf24;"></i>
+            <span>Đóng Shape Vàng</span>
+          </button>
+        </div>
+
+        <!-- KHUNG 3: VIDEO 3 + SHAPE XANH -->
+        <div class="video-frame-box border-blue">
+          <video id="videoEl3" playsinline preload="auto">
+            <source id="source3" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4" type="video/mp4">
+          </video>
+
+          <!-- SHAPE XANH -->
+          <div id="shape3" onclick="handleShapeClick(3)" class="shape-overlay shape-blue shape-closed">
+            <div class="shape-icon-wrap">
+              <i class="fa-solid fa-eye-slash" id="shapeIcon3"></i>
+            </div>
+            <div class="shape-title font-display">SHAPE XANH</div>
+            <div class="shape-hint">Nhấn để mở khung hình 3</div>
+          </div>
+
+          <button id="closeBtn3" onclick="handleShapeClick(3)" class="shape-close-btn hidden">
+            <i class="fa-solid fa-eye-slash" style="color: #60a5fa;"></i>
+            <span>Đóng Shape Xanh</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="player-footer">
+    <div class="footer-inner">
+      <span>Giao diện Player 2 (Màu Vàng) • Game Show Synchronization Engine</span>
+      <span id="playerSyncStatus" style="color: #34d399; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-arrows-rotate"></i> Đồng bộ trực tiếp với Host
+      </span>
+    </div>
+  </footer>
+
+  <script src="/shared-sync.js"></script>
+  <script>
+    const PLAYER_ROLE = 'player2';
+    let socket = null;
+    let currentRoomId = '123456';
+    let timerCountdownInterval = null;
+    let secondsLeft = 60;
+    
+    let openedFrame = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomParam = urlParams.get('roomid') || urlParams.get('room');
+      if (roomParam) currentRoomId = roomParam;
+
+      document.getElementById('headerRoomId').innerText = currentRoomId;
+
+      initSocket();
+      initAudioUnlockListener();
+    });
+
+    function unlockAudio() {
+      window.soundEngine.init();
+      const banner = document.getElementById('audioUnlockBanner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    function initAudioUnlockListener() {
+      document.addEventListener('click', () => {
+        unlockAudio();
+      }, { once: true });
+    }
+
+    function initSocket() {
+      socket = io();
+
+      socket.on('connect', () => {
+        const badge = document.getElementById('connectionBadge');
+        badge.style.background = 'rgba(0, 0, 0, 0.2)';
+        badge.innerHTML = '<span class="pulse-dot"></span><span>Đã Kết Nối</span>';
+
+        socket.emit('join-room', {
+          roomId: currentRoomId,
+          role: PLAYER_ROLE
+        });
+      });
+
+      socket.on('disconnect', () => {
+        const badge = document.getElementById('connectionBadge');
+        badge.style.background = '#450a0a';
+        badge.style.color = '#fecdd3';
+        badge.innerHTML = '<span style="width: 8px; height: 8px; border-radius: 50%; background: #f87171; display: inline-block;"></span><span>Mất Kết Nối</span>';
+      });
+
+      socket.on('room-state', (state) => {
+        applyRoomState(state);
+      });
+
+      socket.on('links-updated', (links) => {
+        updateLinks(links);
+      });
+
+      socket.on('topic-visibility-updated', (data) => {
+        updateTopicVisibility(data);
+      });
+
+      socket.on('audio-action', (data) => {
+        handleAudioAction(data);
+      });
+
+      socket.on('video-action', (data) => {
+        handleVideoAction(data);
+      });
+
+      socket.on('timer-action', (data) => {
+        handleTimerAction(data);
+      });
+    }
+
+    function applyRoomState(state) {
+      if (!state) return;
+      updateLinks(state);
+      updateTopicVisibility(state);
+
+      if (state.timer60s) {
+        handleTimerAction(state.timer60s);
+      }
+
+      if (state.videoState) {
+        handleVideoAction(state.videoState);
+      }
+    }
+
+    function updateLinks(links) {
+      if (!links) return;
+      
+      const v1 = document.getElementById('videoEl1');
+      const v2 = document.getElementById('videoEl2');
+      const v3 = document.getElementById('videoEl3');
+
+      const src1 = window.formatVideoUrl ? window.formatVideoUrl(links.video1Url) : links.video1Url;
+      const src2 = window.formatVideoUrl ? window.formatVideoUrl(links.video2Url) : links.video2Url;
+      const src3 = window.formatVideoUrl ? window.formatVideoUrl(links.video3Url) : links.video3Url;
+
+      if (src1 && v1.src !== src1) {
+        v1.src = src1;
+        v1.load();
+      }
+      if (src2 && v2.src !== src2) {
+        v2.src = src2;
+        v2.load();
+      }
+      if (src3 && v3.src !== src3) {
+        v3.src = src3;
+        v3.load();
+      }
+
+      if (links.topic1) document.getElementById('topicBox1').dataset.topicName = links.topic1;
+      if (links.topic2) document.getElementById('topicBox2').dataset.topicName = links.topic2;
+      if (links.topic3) document.getElementById('topicBox3').dataset.topicName = links.topic3;
+    }
+
+    function updateTopicVisibility(data) {
+      // Topic 1
+      const box1 = document.getElementById('topicBox1');
+      const text1 = document.getElementById('topicText1');
+      const name1 = box1.dataset.topicName || data.topic1 || 'Chủ Đề 1';
+
+      if (data.topic1Visible) {
+        box1.className = 'topic-box active-1';
+        text1.innerHTML = name1;
+      } else {
+        box1.className = 'topic-box';
+        text1.innerHTML = '<i class="fa-solid fa-lock" style="font-size: 12px; color: #ef4444;"></i><span>[ Đang Khóa ]</span>';
+      }
+
+      // Topic 2
+      const box2 = document.getElementById('topicBox2');
+      const text2 = document.getElementById('topicText2');
+      const name2 = box2.dataset.topicName || data.topic2 || 'Chủ Đề 2';
+
+      if (data.topic2Visible) {
+        box2.className = 'topic-box active-2';
+        text2.innerHTML = name2;
+      } else {
+        box2.className = 'topic-box';
+        text2.innerHTML = '<i class="fa-solid fa-lock" style="font-size: 12px; color: #f59e0b;"></i><span>[ Đang Khóa ]</span>';
+      }
+
+      // Topic 3
+      const box3 = document.getElementById('topicBox3');
+      const text3 = document.getElementById('topicText3');
+      const name3 = box3.dataset.topicName || data.topic3 || 'Chủ Đề 3';
+
+      if (data.topic3Visible) {
+        box3.className = 'topic-box active-3';
+        text3.innerHTML = name3;
+      } else {
+        box3.className = 'topic-box';
+        text3.innerHTML = '<i class="fa-solid fa-lock" style="font-size: 12px; color: #3b82f6;"></i><span>[ Đang Khóa ]</span>';
+      }
+    }
+
+    function handleAudioAction(data) {
+      if (data.action === 'play') {
+        if (data.type === 'theme') {
+          window.soundEngine.playTheme();
+        } else if (data.type === '5s') {
+          window.soundEngine.play5Seconds();
+        } else if (data.type === '3s') {
+          window.soundEngine.play3Seconds();
+        }
+      } else if (data.action === 'stop') {
+        window.soundEngine.stopAll();
+      }
+    }
+
+    function handleVideoAction(data) {
+      const v1 = document.getElementById('videoEl1');
+      const v2 = document.getElementById('videoEl2');
+      const v3 = document.getElementById('videoEl3');
+
+      if (typeof data.currentTime === 'number') {
+        if (v1 && Math.abs(v1.currentTime - data.currentTime) > 0.25) v1.currentTime = data.currentTime;
+        if (v2 && Math.abs(v2.currentTime - data.currentTime) > 0.25) v2.currentTime = data.currentTime;
+        if (v3 && Math.abs(v3.currentTime - data.currentTime) > 0.25) v3.currentTime = data.currentTime;
+      }
+
+      if (data.action === 'play' || data.isPlaying) {
+        if (v1) v1.play().catch(()=>{});
+        if (v2) v2.play().catch(()=>{});
+        if (v3) v3.play().catch(()=>{});
+        window.soundEngine.playClipBed(data.currentTime || 0);
+      } else if (data.action === 'pause' || data.isPlaying === false) {
+        if (v1) v1.pause();
+        if (v2) v2.pause();
+        if (v3) v3.pause();
+        window.soundEngine.pauseClipBed();
+      } else if (data.action === 'seek') {
+        if (v1) { v1.currentTime = data.currentTime || 0; v1.pause(); }
+        if (v2) { v2.currentTime = data.currentTime || 0; v2.pause(); }
+        if (v3) { v3.currentTime = data.currentTime || 0; v3.pause(); }
+        window.soundEngine.stopClipBed();
+      }
+    }
+
+    function handleTimerAction(data) {
+      if (timerCountdownInterval) clearInterval(timerCountdownInterval);
+
+      if (data.action === 'start' || data.isRunning) {
+        secondsLeft = typeof data.secondsRemaining === 'number' ? data.secondsRemaining : 60;
+        updateTimerDisplay(secondsLeft);
+        document.getElementById('globalTimerState').innerText = 'Đang đếm ngược';
+
+        timerCountdownInterval = setInterval(() => {
+          secondsLeft--;
+          updateTimerDisplay(secondsLeft);
+          if (secondsLeft <= 0) {
+            clearInterval(timerCountdownInterval);
+            document.getElementById('globalTimerState').innerText = 'Hết giờ';
+            window.soundEngine.stopClipBed();
+          }
+        }, 1000);
+      } else if (data.action === 'pause') {
+        if (typeof data.secondsRemaining === 'number') secondsLeft = data.secondsRemaining;
+        updateTimerDisplay(secondsLeft);
+        document.getElementById('globalTimerState').innerText = 'Tạm dừng';
+        window.soundEngine.pauseClipBed();
+      } else if (data.action === 'reset') {
+        secondsLeft = 60;
+        updateTimerDisplay(60);
+        document.getElementById('globalTimerState').innerText = 'Đã đặt lại 60s';
+        window.soundEngine.stopClipBed();
+      }
+    }
+
+    function updateTimerDisplay(sec) {
+      const displayVal = `${Math.max(0, sec)}s`;
+      const isWarning = sec <= 10 && sec > 0;
+      
+      ['timerDisplay1', 'timerDisplay2', 'timerDisplay3'].forEach(id => {
+        const el = document.getElementById(id);
+        el.innerText = displayVal;
+        if (isWarning) el.classList.add('warning');
+        else el.classList.remove('warning');
+      });
+    }
+
+    function handleShapeClick(frameIndex) {
+      if (openedFrame === frameIndex) {
+        openedFrame = null;
+      } else {
+        openedFrame = frameIndex;
+      }
+      applyShapeStates();
+    }
+
+    function applyShapeStates() {
+      for (let i = 1; i <= 3; i++) {
+        const shape = document.getElementById(`shape${i}`);
+        const closeBtn = document.getElementById(`closeBtn${i}`);
+        if (openedFrame === i) {
+          shape.classList.remove('shape-closed');
+          shape.classList.add('shape-opened');
+          closeBtn.classList.remove('hidden');
+        } else {
+          shape.classList.remove('shape-opened');
+          shape.classList.add('shape-closed');
+          closeBtn.classList.add('hidden');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

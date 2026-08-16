@@ -1,0 +1,6 @@
+{
+  "name": "Game Show Controller & Player Synchronizer",
+  "description": "Hệ thống điều khiển và đồng bộ thời gian thực cho Gameshow gồm Controller, 3 Player, Viewer và trang Đăng nhập liên kết qua NodeJS WebSocket.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

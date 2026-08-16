@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Show Controller - Quản Trò & Điều Khiển</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cabinet+Grotesk:wght@700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    /* Requirement 1: Global font-weight: bold !important in * */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-weight: bold !important;
+    }
+
+    /* Standard CSS and Navy Blue Theme */
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(135deg, #071329 0%, #0b1d3a 50%, #0f2744 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding-bottom: 50px;
+      user-select: none;
+    }
+
+    .font-display { font-family: 'Cabinet Grotesk', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Header Bar */
+    .header-bar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 25, 47, 0.95);
+      border-bottom: 2px solid #1e3d6b;
+      backdrop-filter: blur(10px);
+      padding: 14px 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f59e0b, #e11d48);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0b1329;
+      font-size: 20px;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+
+    .header-title-group h1 {
+      font-size: 20px;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      display: inline-block;
+    }
+
+    .badge-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 10px;
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      margin-left: 8px;
+      vertical-align: middle;
+      text-transform: uppercase;
+    }
+
+    .header-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .room-code-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #08162b;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1.5px solid #1e3d6b;
+      font-size: 13px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      background: rgba(6, 78, 59, 0.7);
+      color: #6ee7b7;
+      border: 1.5px solid #059669;
+    }
+
+    .status-badge.disconnected {
+      background: rgba(127, 29, 29, 0.7);
+      color: #fca5a5;
+      border-color: #b91c1c;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      display: inline-block;
+      animation: pulseAnim 1.5s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Main Content */
+    .main-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Section Cards in Navy Theme */
+    .panel-card {
+      background: #0c213f;
+      border: 2px solid #1c3b68;
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 12px 35px rgba(2, 8, 20, 0.6);
+    }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1.5px solid #1c3b68;
+    }
+
+    .panel-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-header-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .panel-title {
+      font-size: 17px;
+      color: #ffffff;
+    }
+
+    .panel-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* Grids */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    /* Player Cards */
+    .player-card {
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .player-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .player-card.red { background: #1a0f1d; border: 1.5px solid #991b1b; }
+    .player-card.yellow { background: #1f1609; border: 1.5px solid #92400e; }
+    .player-card.blue { background: #0c1938; border: 1.5px solid #1e40af; }
+    .player-card.purple { background: #170f2c; border: 1.5px solid #6b21a8; }
+
+    .player-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .player-badge.red { background: rgba(225, 29, 72, 0.2); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.4); }
+    .player-badge.yellow { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }
+    .player-badge.blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4); }
+    .player-badge.purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
+
+    .pass-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #08162b;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #1e3d6b;
+      margin-top: 6px;
+    }
+
+    .btn-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    /* Forms */
+    .form-input {
+      width: 100%;
+      background: #08162b;
+      border: 1.5px solid #1e3d6b;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: #3b82f6;
+    }
+
+    .input-label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    /* Requirement 5: HOVER EFFECT TO DEEP ORANGE (#ea580c) FOR ALL BUTTONS */
+    .btn, button, .btn-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+    }
+
+    .btn:hover, button:hover, .btn-link:hover {
+      background-color: #ea580c !important;
+      background-image: none !important;
+      color: #ffffff !important;
+      border-color: #c2410c !important;
+      box-shadow: 0 6px 18px rgba(234, 88, 12, 0.5) !important;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: 1.5px solid #3b82f6;
+      color: #ffffff;
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+
+    .btn-emerald {
+      background: #059669;
+      border: 1.5px solid #10b981;
+      color: #ffffff;
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+
+    .btn-dark {
+      background: #08162b;
+      border: 1.5px solid #1e3d6b;
+      color: #cbd5e1;
+      padding: 9px 14px;
+      font-size: 12px;
+    }
+
+    .btn-red {
+      background: #e11d48;
+      border: 1.5px solid #be123c;
+      color: #ffffff;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+
+    .btn-yellow {
+      background: #d97706;
+      border: 1.5px solid #b45309;
+      color: #ffffff;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+
+    .btn-blue {
+      background: #2563eb;
+      border: 1.5px solid #1d4ed8;
+      color: #ffffff;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+
+    .btn-cyan {
+      background: #0891b2;
+      border: 1.5px solid #0e7490;
+      color: #ffffff;
+      padding: 11px 14px;
+      font-size: 13px;
+    }
+
+    .btn-sky {
+      background: #0284c7;
+      border: 1.5px solid #0369a1;
+      color: #ffffff;
+      padding: 11px 14px;
+      font-size: 13px;
+    }
+
+    .btn-action-card {
+      background: #08162b;
+      border: 1.5px solid #1e3d6b;
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .btn-action-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    .btn-action-desc {
+      font-size: 11.5px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    /* Fixed Audio List Display */
+    .audio-badge-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #07152b;
+      border: 1px solid #1b365d;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 12px;
+    }
+
+    .audio-badge-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #0a1c36;
+      border-radius: 8px;
+      border: 1px solid #1e3d6b;
+    }
+
+    /* Timer Row */
+    .timer-bar {
+      background: #08182f;
+      border: 2px solid #254b82;
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .timer-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .timer-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      border: 1.5px solid rgba(99, 102, 241, 0.4);
+    }
+
+    .timer-value {
+      font-size: 28px;
+      color: #ffffff;
+    }
+
+    /* Monitor Preview Videos */
+    .video-monitor-card {
+      background: #08162b;
+      border: 1.5px solid #1e3d6b;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .video-container-ratio {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #1e3d6b;
+    }
+
+    .video-container-ratio video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Toast */
+    .toast-box {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 100;
+      padding: 14px 18px;
+      border-radius: 12px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 420px;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(30px);
+      pointer-events: none;
+    }
+
+    .toast-box.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .toast-success { background: #022c22; border: 1.5px solid #059669; color: #6ee7b7; }
+    .toast-error { background: #450a0a; border: 1.5px solid #dc2626; color: #fca5a5; }
+    .toast-info { background: #0c213f; border: 1.5px solid #2563eb; color: #93c5fd; }
+  </style>
+</head>
+<body>
+  
+  <!-- Header Bar -->
+  <header class="header-bar">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="header-icon">
+          <i class="fa-solid fa-gamepad"></i>
+        </div>
+        <div class="header-title-group">
+          <div>
+            <h1 class="font-display">GAME SHOW CONTROLLER</h1>
+            <span class="badge-tag">Host Control Center</span>
+          </div>
+          <p class="header-desc">Bảng điều khiển đồng bộ âm thanh, video & đồng hồ đếm ngược 60s</p>
+        </div>
+      </div>
+
+      <!-- Quick Room Code & Connection Badge -->
+      <div class="header-right">
+        <div class="room-code-badge">
+          <span style="color: #94a3b8; font-size: 12px;">Mã phòng hiện tại:</span>
+          <span id="currentRoomDisplay" class="font-mono" style="color: #fbbf24; font-size: 16px;">123456</span>
+          <button onclick="copyRoomCode()" title="Copy mã phòng" style="background: none; border: none; color: #94a3b8; padding: 4px;">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+        </div>
+        <div id="socketStatusBadge" class="status-badge">
+          <span class="pulse-dot"></span>
+          <span>Đã kết nối Server</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+
+    <!-- SECTION 1: TẠO PHÒNG & THÔNG TIN PHÒNG -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-header-icon" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">
+            <i class="fa-solid fa-door-open"></i>
+          </div>
+          <h2 class="panel-title font-display">1. Quản Lý Phòng & Cấp Mật Khẩu Người Chơi</h2>
+        </div>
+
+        <!-- Create New Room Button -->
+        <button onclick="createNewRoom()" class="btn btn-primary">
+          <i class="fa-solid fa-plus-circle"></i>
+          <span>Tạo Mã Phòng Mới (Ngẫu Nhiên)</span>
+        </button>
+      </div>
+
+      <!-- Room & Players Info Cards -->
+      <div class="grid-4">
+        
+        <!-- Player 1 Card -->
+        <div class="player-card red">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="player-badge red">
+                <i class="fa-solid fa-user"></i> PLAYER 1
+              </span>
+              <span id="statusP1" style="font-size: 11px; color: #94a3b8; background: #08162b; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e3d6b;">Offline</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu Player 1:</span>
+              <div class="pass-box">
+                <span id="passP1" class="font-mono" style="color: #f87171; font-size: 16px;">1111</span>
+                <button onclick="copyToClipboard(document.getElementById('passP1').innerText, 'Mật khẩu Player 1')" style="background: none; border: none; color: #94a3b8;">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <a id="linkP1" href="/player1.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(159, 18, 57, 0.5); border: 1px solid #be123c; color: #fecdd3; padding: 7px 10px; font-size: 12px;">
+            Mở Giao Diện Player 1 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+          </a>
+        </div>
+
+        <!-- Player 2 Card -->
+        <div class="player-card yellow">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="player-badge yellow">
+                <i class="fa-solid fa-user"></i> PLAYER 2
+              </span>
+              <span id="statusP2" style="font-size: 11px; color: #94a3b8; background: #08162b; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e3d6b;">Offline</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu Player 2:</span>
+              <div class="pass-box">
+                <span id="passP2" class="font-mono" style="color: #fbbf24; font-size: 16px;">2222</span>
+                <button onclick="copyToClipboard(document.getElementById('passP2').innerText, 'Mật khẩu Player 2')" style="background: none; border: none; color: #94a3b8;">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <a id="linkP2" href="/player2.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(180, 83, 9, 0.5); border: 1px solid #d97706; color: #fef3c7; padding: 7px 10px; font-size: 12px;">
+            Mở Giao Diện Player 2 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+          </a>
+        </div>
+
+        <!-- Player 3 Card -->
+        <div class="player-card blue">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="player-badge blue">
+                <i class="fa-solid fa-user"></i> PLAYER 3
+              </span>
+              <span id="statusP3" style="font-size: 11px; color: #94a3b8; background: #08162b; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e3d6b;">Offline</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu Player 3:</span>
+              <div class="pass-box">
+                <span id="passP3" class="font-mono" style="color: #60a5fa; font-size: 16px;">3333</span>
+                <button onclick="copyToClipboard(document.getElementById('passP3').innerText, 'Mật khẩu Player 3')" style="background: none; border: none; color: #94a3b8;">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <a id="linkP3" href="/player3.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(29, 78, 216, 0.5); border: 1px solid #2563eb; color: #bfdbfe; padding: 7px 10px; font-size: 12px;">
+            Mở Giao Diện Player 3 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+          </a>
+        </div>
+
+        <!-- Viewer Card -->
+        <div class="player-card purple">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="player-badge purple">
+                <i class="fa-solid fa-tv"></i> VIEWER
+              </span>
+              <span id="statusViewer" style="font-size: 11px; color: #d8b4fe; background: #08162b; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e3d6b;">0 đang xem</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 11px; color: #94a3b8;">Link chia sẻ khán giả:</span>
+              <div class="pass-box" style="font-size: 12px;">
+                <span id="viewerLinkText" class="font-mono" style="color: #d8b4fe; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">/viewer.html?roomid=123456</span>
+                <button onclick="copyViewerLink()" style="background: none; border: none; color: #94a3b8;">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <a id="linkViewer" href="/viewer.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(109, 40, 217, 0.5); border: 1px solid #7c3aed; color: #ede9fe; padding: 7px 10px; font-size: 12px;">
+            Mở Màn Hình Viewer <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+          </a>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 2: NHẬP LINK VIDEO TỪ EXCEL (FORM CHUẨN) -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-header-icon" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">
+            <i class="fa-solid fa-file-excel"></i>
+          </div>
+          <div>
+            <h2 class="panel-title font-display">2. Nhập Dữ Liệu Đề Thi & Link Video (File Excel DTTT.xlsx)</h2>
+            <p class="panel-subtitle">Upload file Excel theo mẫu chuẩn [Số chủ đề | Tên chủ đề | Link video] hoặc chỉnh sửa trực tiếp</p>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)" />
+          
+          <button onclick="document.getElementById('excelFileInput').click()" class="btn btn-emerald">
+            <i class="fa-solid fa-upload"></i>
+            <span>Tải Lên File Excel</span>
+          </button>
+
+          <button onclick="downloadExcelTemplate()" class="btn btn-dark">
+            <i class="fa-solid fa-download" style="color: #34d399;"></i>
+            <span>Tải File Excel Mẫu (DTTT.xlsx)</span>
+          </button>
+
+          <button onclick="loadDefaultDemoData()" class="btn btn-dark" style="color: #fbbf24;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Nạp Link Drive Mẫu</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Excel Table Form Editor -->
+      <div class="grid-3">
+        
+        <!-- Column 1: Topic 1 & Video 1 -->
+        <div style="background: #08162b; border: 1.5px solid #1e3d6b; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #f87171; font-size: 12px; text-transform: uppercase;">
+            <span style="width: 10px; height: 10px; border-radius: 3px; background: #e11d48; display: inline-block;"></span>
+            Số 1: Chủ Đề 1 & Link Video
+          </div>
+          <div>
+            <label class="input-label">Tên Chủ Đề 1:</label>
+            <input type="text" id="inputTopic1" value="Chủ đề 1" class="form-input" />
+          </div>
+          <div>
+            <label class="input-label">Link Video 1 (Google Drive / MP4):</label>
+            <input type="text" id="inputVideo1" value="https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=drive_link" class="form-input font-mono" />
+          </div>
+        </div>
+
+        <!-- Column 2: Topic 2 & Video 2 -->
+        <div style="background: #08162b; border: 1.5px solid #1e3d6b; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #fbbf24; font-size: 12px; text-transform: uppercase;">
+            <span style="width: 10px; height: 10px; border-radius: 3px; background: #f59e0b; display: inline-block;"></span>
+            Số 2: Chủ Đề 2 & Link Video
+          </div>
+          <div>
+            <label class="input-label">Tên Chủ Đề 2:</label>
+            <input type="text" id="inputTopic2" value="Chủ đề 2" class="form-input" />
+          </div>
+          <div>
+            <label class="input-label">Link Video 2 (Google Drive / MP4):</label>
+            <input type="text" id="inputVideo2" value="https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=drive_link" class="form-input font-mono" />
+          </div>
+        </div>
+
+        <!-- Column 3: Topic 3 & Video 3 -->
+        <div style="background: #08162b; border: 1.5px solid #1e3d6b; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #60a5fa; font-size: 12px; text-transform: uppercase;">
+            <span style="width: 10px; height: 10px; border-radius: 3px; background: #2563eb; display: inline-block;"></span>
+            Số 3: Chủ Đề 3 & Link Video
+          </div>
+          <div>
+            <label class="input-label">Tên Chủ Đề 3:</label>
+            <input type="text" id="inputTopic3" value="Chủ đề 3" class="form-input" />
+          </div>
+          <div>
+            <label class="input-label">Link Video 3 (Google Drive / MP4):</label>
+            <input type="text" id="inputVideo3" value="https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=drive_link" class="form-input font-mono" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sound tracks in system -->
+      <div style="margin-top: 14px;" class="audio-badge-list">
+        <div style="font-size: 12px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-music"></i>
+          <span>Danh Sách File Âm Thanh Cố Định Đã Cài Đặt Sẵn Trong Hệ Thống:</span>
+        </div>
+        <div class="grid-4" style="gap: 8px; margin-top: 4px;">
+          <div class="audio-badge-item">
+            <span style="color: #cbd5e1;">Nhạc chủ đề:</span>
+            <span class="font-mono" style="color: #f43f5e; font-size: 11px;">The Master Of Minds - Category.mp3</span>
+          </div>
+          <div class="audio-badge-item">
+            <span style="color: #cbd5e1;">Nhạc 5 giây:</span>
+            <span class="font-mono" style="color: #38bdf8; font-size: 11px;">The Master Of Minds - 5s CountDown.mp3</span>
+          </div>
+          <div class="audio-badge-item">
+            <span style="color: #cbd5e1;">Nhạc 3 giây:</span>
+            <span class="font-mono" style="color: #60a5fa; font-size: 11px;">3s.mp3</span>
+          </div>
+          <div class="audio-badge-item">
+            <span style="color: #cbd5e1;">Nhạc nền video:</span>
+            <span class="font-mono" style="color: #34d399; font-size: 11px;">The Master Of Minds - Clip bed R2.mp3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+        <button onclick="saveAndSyncLinks()" class="btn btn-emerald" style="padding: 12px 20px;">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>Cập Nhật Đề Thi & Link Video Lên Tất Cả Player & Viewer</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- SECTION 3: BỘ NÚT ĐIỀU KHIỂN CHÍNH -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-header-icon" style="background: rgba(225, 29, 72, 0.2); color: #fb7185;">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+          <div>
+            <h2 class="panel-title font-display">3. Các Nút Điều Khiển Tác Vụ (Control Actions)</h2>
+            <p class="panel-subtitle">Điều khiển phát nhạc, hiện chủ đề, và đồng bộ phát video cùng đồng hồ đếm ngược 60s</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid 4 Main Button Categories -->
+      <div class="grid-4">
+
+        <!-- 1. PHÁT NHẠC CHỦ ĐỀ -->
+        <div class="btn-action-card">
+          <div>
+            <div class="btn-action-header" style="color: #fb7185;">
+              <i class="fa-solid fa-music"></i>
+              <span>Nhạc Chủ Đề</span>
+            </div>
+            <p class="btn-action-desc" style="margin-top: 6px;">Phát file <code style="color: #f43f5e;">The Master Of Minds - Category.mp3</code> trên Player và Viewer.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button onclick="triggerPlayThemeAudio()" class="btn btn-red" style="padding: 12px 14px; font-size: 13px;">
+              <i class="fa-solid fa-play"></i>
+              <span>Phát Nhạc Chủ Đề</span>
+            </button>
+            <button onclick="triggerStopAudio()" class="btn btn-dark">
+              <i class="fa-solid fa-stop" style="font-size: 10px;"></i>
+              <span>Dừng Âm Thanh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. HIỆN 3 CHỦ ĐỀ -->
+        <div class="btn-action-card">
+          <div>
+            <div class="btn-action-header" style="color: #fbbf24;">
+              <i class="fa-solid fa-tags"></i>
+              <span>Hiện 3 Chủ Đề</span>
+            </div>
+            <p class="btn-action-desc" style="margin-top: 6px;">Hiển thị từng chủ đề trên 3 ô chữ nhật ở Player và Viewer.</p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Nút Hiện Chủ Đề 1 -->
+            <button id="btnTopic1" onclick="toggleTopic(1)" class="btn btn-red" style="justify-content: space-between;">
+              <span>Hiện Chủ Đề 1</span>
+              <i class="fa-solid fa-eye" style="font-size: 12px;"></i>
+            </button>
+
+            <!-- Nút Hiện Chủ Đề 2 -->
+            <button id="btnTopic2" onclick="toggleTopic(2)" class="btn btn-yellow" style="justify-content: space-between;">
+              <span>Hiện Chủ Đề 2</span>
+              <i class="fa-solid fa-eye" style="font-size: 12px;"></i>
+            </button>
+
+            <!-- Nút Hiện Chủ Đề 3 -->
+            <button id="btnTopic3" onclick="toggleTopic(3)" class="btn btn-blue" style="justify-content: space-between;">
+              <span>Hiện Chủ Đề 3</span>
+              <i class="fa-solid fa-eye" style="font-size: 12px;"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. PHÁT NHẠC 5S & 3S -->
+        <div class="btn-action-card">
+          <div>
+            <div class="btn-action-header" style="color: #38bdf8;">
+              <i class="fa-solid fa-stopwatch"></i>
+              <span>Nhạc Đếm 5s & 3s</span>
+            </div>
+            <p class="btn-action-desc" style="margin-top: 6px;">Phát file <code style="color: #38bdf8;">5s CountDown.mp3</code> hoặc <code style="color: #60a5fa;">3s.mp3</code>.</p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button onclick="triggerPlay5sAudio()" class="btn btn-cyan">
+              <i class="fa-solid fa-bell"></i>
+              <span>Phát Nhạc 5 Giây</span>
+            </button>
+            <button onclick="triggerPlay3sAudio()" class="btn btn-sky">
+              <i class="fa-solid fa-bell"></i>
+              <span>Phát Nhạc 3 Giây</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. PHÁT VIDEO & TÍNH GIỜ ĐỒNG BỘ -->
+        <div class="btn-action-card">
+          <div>
+            <div class="btn-action-header" style="color: #34d399;">
+              <i class="fa-solid fa-clapperboard"></i>
+              <span>Phát 3 Video & Tính Giờ</span>
+            </div>
+            <p class="btn-action-desc" style="margin-top: 6px;">Video chạy thì đồng hồ 60s chạy & phát nhạc Clip bed R2. Video dừng thì đồng hồ và nhạc dừng.</p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button onclick="triggerPlayVideos()" class="btn btn-emerald" style="padding: 12px 14px; font-size: 13px;">
+              <i class="fa-solid fa-play"></i>
+              <span>Phát Video (Bắt Đầu Đếm Giờ)</span>
+            </button>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <button onclick="triggerPauseVideos()" class="btn btn-dark" style="color: #fbbf24;">
+                <i class="fa-solid fa-pause"></i>
+                <span>Tạm Dừng</span>
+              </button>
+              <button onclick="triggerResetVideos()" class="btn btn-dark">
+                <i class="fa-solid fa-rotate-left"></i>
+                <span>Tua 0s / Đặt Lại</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TIMER 60S CONTROL BAR -->
+      <div class="timer-bar" style="margin-top: 20px;">
+        <div class="timer-left">
+          <div class="timer-icon">
+            <i class="fa-solid fa-hourglass-half"></i>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #818cf8; text-transform: uppercase;">Đồng Hồ Đếm Ngược 60 Giây (Gắn Liền Cùng Video & Nhạc Clip Bed)</div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
+              <span id="controllerTimerDisplay" class="font-mono timer-value">60s</span>
+              <span id="timerStatusText" style="font-size: 12px; color: #94a3b8;">(Chưa bắt đầu)</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+          <button onclick="triggerPlayVideos()" class="btn btn-primary" style="padding: 11px 18px;">
+            <i class="fa-solid fa-play"></i>
+            <span>Bắt Đầu Video & Đếm 60s</span>
+          </button>
+          <button onclick="triggerPauseVideos()" class="btn btn-dark" style="color: #fbbf24;">
+            <i class="fa-solid fa-pause"></i>
+            <span>Tạm Dừng</span>
+          </button>
+          <button onclick="triggerResetVideos()" class="btn btn-dark">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>Đặt Lại 60s</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 4: MÀN HÌNH PREVIEW GIÁM SÁT HOST -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <div class="panel-header-icon" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;">
+            <i class="fa-solid fa-display"></i>
+          </div>
+          <div>
+            <h2 class="panel-title font-display">4. Màn Hình Giám Sát Của Quản Trò (Host Monitor)</h2>
+            <p class="panel-subtitle">Theo dõi trực tiếp thời gian và nội dung 3 video đồng bộ</p>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 8px;">
+          <span>Thời gian video:</span>
+          <span id="previewVideoTime" class="font-mono" style="color: #fbbf24; font-size: 15px;">00:00</span>
+        </div>
+      </div>
+
+      <!-- 3 Video Preview Cards -->
+      <div class="grid-3">
+        
+        <!-- Preview Column 1 -->
+        <div class="video-monitor-card" style="border-color: #881337;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <span style="color: #f87171;">Video 1 (Đỏ)</span>
+            <span id="previewTopicBadge1" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #450a0a; color: #fca5a5; border: 1px solid #991b1b;">Khóa</span>
+          </div>
+          <div class="video-container-ratio">
+            <video id="previewVideoEl1" muted playsinline>
+              <source id="previewSource1" src="" type="video/mp4">
+            </video>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="previewTopicName1">Chủ đề 1</div>
+        </div>
+
+        <!-- Preview Column 2 -->
+        <div class="video-monitor-card" style="border-color: #854d0e;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <span style="color: #fbbf24;">Video 2 (Vàng)</span>
+            <span id="previewTopicBadge2" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #451a03; color: #fde68a; border: 1px solid #92400e;">Khóa</span>
+          </div>
+          <div class="video-container-ratio">
+            <video id="previewVideoEl2" muted playsinline>
+              <source id="previewSource2" src="" type="video/mp4">
+            </video>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="previewTopicName2">Chủ đề 2</div>
+        </div>
+
+        <!-- Preview Column 3 -->
+        <div class="video-monitor-card" style="border-color: #1e40af;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <span style="color: #60a5fa;">Video 3 (Xanh)</span>
+            <span id="previewTopicBadge3" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #172554; color: #bfdbfe; border: 1px solid #1e3a8a;">Khóa</span>
+          </div>
+          <div class="video-container-ratio">
+            <video id="previewVideoEl3" muted playsinline>
+              <source id="previewSource3" src="" type="video/mp4">
+            </video>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="previewTopicName3">Chủ đề 3</div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="toast-box"></div>
+
+  <script src="/shared-sync.js"></script>
+  <script>
+    // State management
+    let socket = null;
+    let currentRoomId = '123456';
+    let roomData = null;
+    let timerInterval = null;
+    let secondsLeft = 60;
+    let topicVisibility = { 1: false, 2: false, 3: false };
+    let isVideoPlaying = false;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomParam = urlParams.get('roomid') || urlParams.get('room');
+      if (roomParam && roomParam.length === 6) {
+        currentRoomId = roomParam;
+      }
+
+      initSocket();
+      updateRoomDisplay();
+    });
+
+    function initSocket() {
+      socket = io();
+
+      socket.on('connect', () => {
+        const badge = document.getElementById('socketStatusBadge');
+        badge.className = 'status-badge';
+        badge.innerHTML = '<span class="pulse-dot"></span><span>Đã kết nối Server</span>';
+
+        socket.emit('join-room', {
+          roomId: currentRoomId,
+          role: 'controller'
+        });
+      });
+
+      socket.on('disconnect', () => {
+        const badge = document.getElementById('socketStatusBadge');
+        badge.className = 'status-badge disconnected';
+        badge.innerHTML = '<span style="width: 8px; height: 8px; border-radius: 50%; background: #f87171; display: inline-block;"></span><span>Mất kết nối</span>';
+      });
+
+      socket.on('room-state', (state) => {
+        roomData = state;
+        applyRoomState(state);
+      });
+
+      socket.on('presence-update', (presence) => {
+        updatePresenceUI(presence);
+      });
+
+      socket.on('links-updated', (links) => {
+        if (links.topic1) document.getElementById('inputTopic1').value = links.topic1;
+        if (links.topic2) document.getElementById('inputTopic2').value = links.topic2;
+        if (links.topic3) document.getElementById('inputTopic3').value = links.topic3;
+        if (links.video1Url) document.getElementById('inputVideo1').value = links.video1Url;
+        if (links.video2Url) document.getElementById('inputVideo2').value = links.video2Url;
+        if (links.video3Url) document.getElementById('inputVideo3').value = links.video3Url;
+        loadPreviewVideos(links.video1Url, links.video2Url, links.video3Url);
+      });
+
+      socket.on('topic-visibility-updated', (data) => {
+        topicVisibility[1] = data.topic1Visible;
+        topicVisibility[2] = data.topic2Visible;
+        topicVisibility[3] = data.topic3Visible;
+        updateTopicButtonsUI();
+      });
+
+      socket.on('video-action', (data) => {
+        handleVideoAction(data);
+      });
+
+      socket.on('timer-action', (data) => {
+        handleTimerAction(data);
+      });
+    }
+
+    function applyRoomState(state) {
+      if (!state) return;
+      if (state.passwords) {
+        document.getElementById('passP1').innerText = state.passwords.player1 || '1111';
+        document.getElementById('passP2').innerText = state.passwords.player2 || '2222';
+        document.getElementById('passP3').innerText = state.passwords.player3 || '3333';
+      }
+
+      if (state.topic1) document.getElementById('inputTopic1').value = state.topic1;
+      if (state.topic2) document.getElementById('inputTopic2').value = state.topic2;
+      if (state.topic3) document.getElementById('inputTopic3').value = state.topic3;
+      if (state.video1Url) document.getElementById('inputVideo1').value = state.video1Url;
+      if (state.video2Url) document.getElementById('inputVideo2').value = state.video2Url;
+      if (state.video3Url) document.getElementById('inputVideo3').value = state.video3Url;
+
+      topicVisibility[1] = !!state.topic1Visible;
+      topicVisibility[2] = !!state.topic2Visible;
+      topicVisibility[3] = !!state.topic3Visible;
+      updateTopicButtonsUI();
+
+      if (state.connected) {
+        updatePresenceUI(state.connected);
+      }
+
+      loadPreviewVideos(state.video1Url, state.video2Url, state.video3Url);
+
+      if (state.timer60s) {
+        handleTimerAction(state.timer60s);
+      }
+      if (state.videoState) {
+        handleVideoAction(state.videoState);
+      }
+    }
+
+    function updatePresenceUI(presence) {
+      if (!presence) return;
+      
+      const p1Badge = document.getElementById('statusP1');
+      if (presence.player1) {
+        p1Badge.style.color = '#34d399';
+        p1Badge.style.background = 'rgba(6, 78, 59, 0.8)';
+        p1Badge.style.borderColor = '#059669';
+        p1Badge.innerHTML = '🟢 Online';
+      } else {
+        p1Badge.style.color = '#94a3b8';
+        p1Badge.style.background = '#08162b';
+        p1Badge.style.borderColor = '#1e3d6b';
+        p1Badge.innerHTML = 'Offline';
+      }
+
+      const p2Badge = document.getElementById('statusP2');
+      if (presence.player2) {
+        p2Badge.style.color = '#34d399';
+        p2Badge.style.background = 'rgba(6, 78, 59, 0.8)';
+        p2Badge.style.borderColor = '#059669';
+        p2Badge.innerHTML = '🟢 Online';
+      } else {
+        p2Badge.style.color = '#94a3b8';
+        p2Badge.style.background = '#08162b';
+        p2Badge.style.borderColor = '#1e3d6b';
+        p2Badge.innerHTML = 'Offline';
+      }
+
+      const p3Badge = document.getElementById('statusP3');
+      if (presence.player3) {
+        p3Badge.style.color = '#34d399';
+        p3Badge.style.background = 'rgba(6, 78, 59, 0.8)';
+        p3Badge.style.borderColor = '#059669';
+        p3Badge.innerHTML = '🟢 Online';
+      } else {
+        p3Badge.style.color = '#94a3b8';
+        p3Badge.style.background = '#08162b';
+        p3Badge.style.borderColor = '#1e3d6b';
+        p3Badge.innerHTML = 'Offline';
+      }
+
+      const vBadge = document.getElementById('statusViewer');
+      vBadge.innerText = `${presence.viewers || 0} đang xem`;
+    }
+
+    function updateRoomDisplay() {
+      document.getElementById('currentRoomDisplay').innerText = currentRoomId;
+      document.getElementById('linkP1').href = `/player1.html?roomid=${currentRoomId}`;
+      document.getElementById('linkP2').href = `/player2.html?roomid=${currentRoomId}`;
+      document.getElementById('linkP3').href = `/player3.html?roomid=${currentRoomId}`;
+      document.getElementById('linkViewer').href = `/viewer.html?roomid=${currentRoomId}`;
+      document.getElementById('viewerLinkText').innerText = `/viewer.html?roomid=${currentRoomId}`;
+    }
+
+    async function createNewRoom() {
+      const randomRoomId = Math.floor(100000 + Math.random() * 900000).toString();
+      const p1Pass = Math.floor(1000 + Math.random() * 9000).toString();
+      const p2Pass = Math.floor(1000 + Math.random() * 9000).toString();
+      const p3Pass = Math.floor(1000 + Math.random() * 9000).toString();
+
+      try {
+        const res = await fetch('/api/create-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomId: randomRoomId,
+            player1Pass: p1Pass,
+            player2Pass: p2Pass,
+            player3Pass: p3Pass,
+            topic1: document.getElementById('inputTopic1').value,
+            topic2: document.getElementById('inputTopic2').value,
+            topic3: document.getElementById('inputTopic3').value,
+            video1Url: document.getElementById('inputVideo1').value,
+            video2Url: document.getElementById('inputVideo2').value,
+            video3Url: document.getElementById('inputVideo3').value
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentRoomId = data.roomId;
+          updateRoomDisplay();
+          document.getElementById('passP1').innerText = data.passwords.player1;
+          document.getElementById('passP2').innerText = data.passwords.player2;
+          document.getElementById('passP3').innerText = data.passwords.player3;
+
+          // Rejoin socket room
+          socket.emit('join-room', { roomId: currentRoomId, role: 'controller' });
+
+          showToast(`Đã tạo phòng mới thành công! Mã: ${currentRoomId}`, 'success');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Lỗi tạo phòng!', 'error');
+      }
+    }
+
+    function updateTopicButtonsUI() {
+      // Button 1
+      const btn1 = document.getElementById('btnTopic1');
+      const badge1 = document.getElementById('previewTopicBadge1');
+      const t1 = document.getElementById('inputTopic1').value;
+      document.getElementById('previewTopicName1').innerText = t1;
+
+      if (topicVisibility[1]) {
+        btn1.className = 'btn btn-emerald';
+        btn1.style.justifyContent = 'space-between';
+        btn1.innerHTML = `<span>Đang Hiện CĐ 1</span><i class="fa-solid fa-eye-slash" style="font-size: 12px;"></i>`;
+        badge1.style.background = '#022c22';
+        badge1.style.borderColor = '#059669';
+        badge1.style.color = '#6ee7b7';
+        badge1.innerText = 'Đang Hiện';
+      } else {
+        btn1.className = 'btn btn-red';
+        btn1.style.justifyContent = 'space-between';
+        btn1.innerHTML = `<span>Hiện Chủ Đề 1</span><i class="fa-solid fa-eye" style="font-size: 12px;"></i>`;
+        badge1.style.background = '#450a0a';
+        badge1.style.borderColor = '#991b1b';
+        badge1.style.color = '#fca5a5';
+        badge1.innerText = 'Khóa';
+      }
+
+      // Button 2
+      const btn2 = document.getElementById('btnTopic2');
+      const badge2 = document.getElementById('previewTopicBadge2');
+      const t2 = document.getElementById('inputTopic2').value;
+      document.getElementById('previewTopicName2').innerText = t2;
+
+      if (topicVisibility[2]) {
+        btn2.className = 'btn btn-emerald';
+        btn2.style.justifyContent = 'space-between';
+        btn2.innerHTML = `<span>Đang Hiện CĐ 2</span><i class="fa-solid fa-eye-slash" style="font-size: 12px;"></i>`;
+        badge2.style.background = '#022c22';
+        badge2.style.borderColor = '#059669';
+        badge2.style.color = '#6ee7b7';
+        badge2.innerText = 'Đang Hiện';
+      } else {
+        btn2.className = 'btn btn-yellow';
+        btn2.style.justifyContent = 'space-between';
+        btn2.innerHTML = `<span>Hiện Chủ Đề 2</span><i class="fa-solid fa-eye" style="font-size: 12px;"></i>`;
+        badge2.style.background = '#451a03';
+        badge2.style.borderColor = '#92400e';
+        badge2.style.color = '#fde68a';
+        badge2.innerText = 'Khóa';
+      }
+
+      // Button 3
+      const btn3 = document.getElementById('btnTopic3');
+      const badge3 = document.getElementById('previewTopicBadge3');
+      const t3 = document.getElementById('inputTopic3').value;
+      document.getElementById('previewTopicName3').innerText = t3;
+
+      if (topicVisibility[3]) {
+        btn3.className = 'btn btn-emerald';
+        btn3.style.justifyContent = 'space-between';
+        btn3.innerHTML = `<span>Đang Hiện CĐ 3</span><i class="fa-solid fa-eye-slash" style="font-size: 12px;"></i>`;
+        badge3.style.background = '#022c22';
+        badge3.style.borderColor = '#059669';
+        badge3.style.color = '#6ee7b7';
+        badge3.innerText = 'Đang Hiện';
+      } else {
+        btn3.className = 'btn btn-blue';
+        btn3.style.justifyContent = 'space-between';
+        btn3.innerHTML = `<span>Hiện Chủ Đề 3</span><i class="fa-solid fa-eye" style="font-size: 12px;"></i>`;
+        badge3.style.background = '#172554';
+        badge3.style.borderColor = '#1e3a8a';
+        badge3.style.color = '#bfdbfe';
+        badge3.innerText = 'Khóa';
+      }
+    }
+
+    // TOPIC ACTIONS
+    function toggleTopic(index) {
+      const newState = !topicVisibility[index];
+      socket.emit('controller:show-topic', {
+        roomId: currentRoomId,
+        topicIndex: index,
+        visible: newState
+      });
+      showToast(`${newState ? 'Đã hiện' : 'Đã ẩn'} Chủ đề ${index} trên tất cả Player & Viewer!`, 'info');
+    }
+
+    // AUDIO ACTIONS (Fixed files)
+    function triggerPlayThemeAudio() {
+      window.soundEngine.playTheme();
+      socket.emit('controller:play-theme-audio');
+      showToast('Đang phát Nhạc Chủ Đề (The Master Of Minds - Category.mp3)!', 'info');
+    }
+
+    function triggerPlay5sAudio() {
+      window.soundEngine.play5Seconds();
+      socket.emit('controller:play-5s-audio');
+      showToast('Đang phát Nhạc 5 Giây (The Master Of Minds - 5s CountDown.mp3)!', 'info');
+    }
+
+    function triggerPlay3sAudio() {
+      window.soundEngine.play3Seconds();
+      socket.emit('controller:play-3s-audio');
+      showToast('Đang phát Nhạc 3 Giây (3s.mp3)!', 'info');
+    }
+
+    function triggerStopAudio() {
+      window.soundEngine.stopAll();
+      socket.emit('controller:stop-audio');
+      showToast('Đã dừng toàn bộ âm thanh!', 'info');
+    }
+
+    // VIDEO & 60s TIMER SYNCHRONOUS PLAYBACK
+    function triggerPlayVideos() {
+      const v1 = document.getElementById('previewVideoEl1');
+      const time = (v1 && !isNaN(v1.currentTime)) ? v1.currentTime : 0;
+      
+      const v2 = document.getElementById('previewVideoEl2');
+      const v3 = document.getElementById('previewVideoEl3');
+      
+      if (v1) v1.play().catch(()=>{});
+      if (v2) v2.play().catch(()=>{});
+      if (v3) v3.play().catch(()=>{});
+
+      isVideoPlaying = true;
+
+      // 1. Play Clip Bed Music at matching currentTime
+      window.soundEngine.playClipBed(time);
+
+      // 2. Start 60s Countdown Timer
+      startTimer60s();
+
+      // 3. Emit play to all connected players & viewers
+      socket.emit('controller:play-videos', { currentTime: time });
+      showToast('Đang phát 3 Video, nhạc Clip bed R2 và đếm ngược 60s!', 'success');
+    }
+
+    function triggerPauseVideos() {
+      const v1 = document.getElementById('previewVideoEl1');
+      const time = (v1 && !isNaN(v1.currentTime)) ? v1.currentTime : 0;
+
+      if (document.getElementById('previewVideoEl1')) document.getElementById('previewVideoEl1').pause();
+      if (document.getElementById('previewVideoEl2')) document.getElementById('previewVideoEl2').pause();
+      if (document.getElementById('previewVideoEl3')) document.getElementById('previewVideoEl3').pause();
+
+      isVideoPlaying = false;
+
+      // 1. Pause Clip Bed Music at this exact moment
+      window.soundEngine.pauseClipBed();
+
+      // 2. Pause 60s Countdown Timer
+      pauseTimer60s();
+
+      // 3. Emit pause to all connected players & viewers
+      socket.emit('controller:pause-videos', { currentTime: time });
+      showToast('Đã tạm dừng Video, Nhạc và Đồng hồ đếm ngược!', 'info');
+    }
+
+    function triggerResetVideos() {
+      const v1 = document.getElementById('previewVideoEl1');
+      const v2 = document.getElementById('previewVideoEl2');
+      const v3 = document.getElementById('previewVideoEl3');
+
+      if (v1) { v1.currentTime = 0; v1.pause(); }
+      if (v2) { v2.currentTime = 0; v2.pause(); }
+      if (v3) { v3.currentTime = 0; v3.pause(); }
+
+      isVideoPlaying = false;
+
+      // 1. Reset Clip Bed Music
+      window.soundEngine.stopClipBed();
+
+      // 2. Reset 60s Countdown Timer
+      resetTimer60s();
+
+      // 3. Emit reset to all connected players & viewers
+      socket.emit('controller:seek-videos', { currentTime: 0 });
+      showToast('Đã đặt lại Video về 00:00 và Đồng hồ về 60s!', 'info');
+    }
+
+    function handleVideoAction(data) {
+      const v1 = document.getElementById('previewVideoEl1');
+      const v2 = document.getElementById('previewVideoEl2');
+      const v3 = document.getElementById('previewVideoEl3');
+
+      if (typeof data.currentTime === 'number') {
+        if (v1 && Math.abs(v1.currentTime - data.currentTime) > 0.3) v1.currentTime = data.currentTime;
+        if (v2 && Math.abs(v2.currentTime - data.currentTime) > 0.3) v2.currentTime = data.currentTime;
+        if (v3 && Math.abs(v3.currentTime - data.currentTime) > 0.3) v3.currentTime = data.currentTime;
+      }
+
+      if (data.action === 'play') {
+        isVideoPlaying = true;
+        if (v1) v1.play().catch(()=>{});
+        if (v2) v2.play().catch(()=>{});
+        if (v3) v3.play().catch(()=>{});
+        window.soundEngine.playClipBed(data.currentTime || 0);
+      } else if (data.action === 'pause') {
+        isVideoPlaying = false;
+        if (v1) v1.pause();
+        if (v2) v2.pause();
+        if (v3) v3.pause();
+        window.soundEngine.pauseClipBed();
+      } else if (data.action === 'seek') {
+        isVideoPlaying = false;
+        if (v1) { v1.currentTime = data.currentTime || 0; v1.pause(); }
+        if (v2) { v2.currentTime = data.currentTime || 0; v2.pause(); }
+        if (v3) { v3.currentTime = data.currentTime || 0; v3.pause(); }
+        window.soundEngine.stopClipBed();
+      }
+    }
+
+    // Video Monitor Timer
+    setInterval(() => {
+      const v1 = document.getElementById('previewVideoEl1');
+      if (v1 && !isNaN(v1.currentTime)) {
+        const cur = Math.floor(v1.currentTime);
+        const mins = String(Math.floor(cur / 60)).padStart(2, '0');
+        const secs = String(cur % 60).padStart(2, '0');
+        document.getElementById('previewVideoTime').innerText = `${mins}:${secs}`;
+      }
+    }, 500);
+
+    // TIMER 60s ENGINE
+    function startTimer60s() {
+      if (timerInterval) clearInterval(timerInterval);
+      document.getElementById('timerStatusText').innerText = '(Đang đếm ngược)';
+      
+      socket.emit('controller:timer-action', { action: 'start', seconds: secondsLeft });
+
+      timerInterval = setInterval(() => {
+        secondsLeft--;
+        document.getElementById('controllerTimerDisplay').innerText = `${Math.max(0, secondsLeft)}s`;
+        
+        // When 60s runs out: stop music and stop video
+        if (secondsLeft <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('timerStatusText').innerText = '(Hết giờ 60s!)';
+          window.soundEngine.stopClipBed();
+          window.soundEngine.synthesizeCountdown(1);
+          triggerPauseVideos();
+          showToast('Đã hết 60 giây! Tự động dừng nhạc và video.', 'info');
+        }
+      }, 1000);
+    }
+
+    function pauseTimer60s() {
+      if (timerInterval) clearInterval(timerInterval);
+      document.getElementById('timerStatusText').innerText = '(Tạm dừng)';
+      socket.emit('controller:timer-action', { action: 'pause', seconds: secondsLeft });
+    }
+
+    function resetTimer60s() {
+      if (timerInterval) clearInterval(timerInterval);
+      secondsLeft = 60;
+      document.getElementById('controllerTimerDisplay').innerText = `60s`;
+      document.getElementById('timerStatusText').innerText = '(Đã đặt lại 60s)';
+      socket.emit('controller:timer-action', { action: 'reset' });
+    }
+
+    function handleTimerAction(data) {
+      if (data.action === 'start' || data.isRunning) {
+        if (timerInterval) clearInterval(timerInterval);
+        secondsLeft = typeof data.secondsRemaining === 'number' ? data.secondsRemaining : 60;
+        document.getElementById('controllerTimerDisplay').innerText = `${secondsLeft}s`;
+        document.getElementById('timerStatusText').innerText = '(Đang đếm ngược)';
+        
+        timerInterval = setInterval(() => {
+          secondsLeft--;
+          document.getElementById('controllerTimerDisplay').innerText = `${Math.max(0, secondsLeft)}s`;
+          if (secondsLeft <= 0) {
+            clearInterval(timerInterval);
+            document.getElementById('timerStatusText').innerText = '(Hết giờ 60s!)';
+            window.soundEngine.stopClipBed();
+          }
+        }, 1000);
+      } else if (data.action === 'pause') {
+        if (timerInterval) clearInterval(timerInterval);
+        if (typeof data.secondsRemaining === 'number') secondsLeft = data.secondsRemaining;
+        document.getElementById('controllerTimerDisplay').innerText = `${secondsLeft}s`;
+        document.getElementById('timerStatusText').innerText = '(Tạm dừng)';
+      } else if (data.action === 'reset') {
+        if (timerInterval) clearInterval(timerInterval);
+        secondsLeft = 60;
+        document.getElementById('controllerTimerDisplay').innerText = `60s`;
+        document.getElementById('timerStatusText').innerText = '(Đã đặt lại 60s)';
+      }
+    }
+
+    function loadPreviewVideos(u1, u2, u3) {
+      const formatted1 = window.formatVideoUrl(u1);
+      const formatted2 = window.formatVideoUrl(u2);
+      const formatted3 = window.formatVideoUrl(u3);
+
+      if (formatted1) {
+        const v1 = document.getElementById('previewVideoEl1');
+        if (v1 && v1.src !== formatted1) {
+          v1.src = formatted1;
+          v1.load();
+        }
+      }
+      if (formatted2) {
+        const v2 = document.getElementById('previewVideoEl2');
+        if (v2 && v2.src !== formatted2) {
+          v2.src = formatted2;
+          v2.load();
+        }
+      }
+      if (formatted3) {
+        const v3 = document.getElementById('previewVideoEl3');
+        if (v3 && v3.src !== formatted3) {
+          v3.src = formatted3;
+          v3.load();
+        }
+      }
+    }
+
+    function saveAndSyncLinks() {
+      const topic1 = document.getElementById('inputTopic1').value.trim();
+      const topic2 = document.getElementById('inputTopic2').value.trim();
+      const topic3 = document.getElementById('inputTopic3').value.trim();
+      const video1Url = document.getElementById('inputVideo1').value.trim();
+      const video2Url = document.getElementById('inputVideo2').value.trim();
+      const video3Url = document.getElementById('inputVideo3').value.trim();
+
+      socket.emit('controller:update-links', {
+        topic1, topic2, topic3,
+        video1Url, video2Url, video3Url
+      });
+
+      loadPreviewVideos(video1Url, video2Url, video3Url);
+      updateTopicButtonsUI();
+
+      showToast('Đã lưu và cập nhật link video/chủ đề tới tất cả Player & Viewer!', 'success');
+    }
+
+    function loadDefaultDemoData() {
+      document.getElementById('inputTopic1').value = 'Chủ đề 1';
+      document.getElementById('inputVideo1').value = 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=drive_link';
+      document.getElementById('inputTopic2').value = 'Chủ đề 2';
+      document.getElementById('inputVideo2').value = 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=drive_link';
+      document.getElementById('inputTopic3').value = 'Chủ đề 3';
+      document.getElementById('inputVideo3').value = 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=drive_link';
+
+      saveAndSyncLinks();
+      showToast('Đã nạp link Google Drive mẫu chuẩn theo form đề thi!', 'info');
+    }
+
+    // EXCEL IMPORT & EXPORT THEO FORM CHUẨN [Số chủ đề | Tên chủ đề | Link video]
+    function handleExcelUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          if (json && json.length > 0) {
+            parseExcelRows(json);
+          } else {
+            showToast('File Excel không có dữ liệu!', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Lỗi đọc file Excel. Vui lòng kiểm tra định dạng!', 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function parseExcelRows(rows) {
+      let t1 = '', v1 = '', t2 = '', v2 = '', t3 = '', v3 = '';
+
+      // Pattern 1: Table format as in user image:
+      // Row 0: [Số chủ đề, Tên chủ đề, Link video]
+      // Row 1: [1, Chủ đề 1, Link video 1]
+      // Row 2: [2, Chủ đề 2, Link video 2]
+      // Row 3: [3, Chủ đề 3, Link video 3]
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.length === 0) continue;
+
+        const colA = String(row[0] !== undefined ? row[0] : '').trim();
+        const colB = String(row[1] !== undefined ? row[1] : '').trim();
+        const colC = String(row[2] !== undefined ? row[2] : '').trim();
+
+        if (colA === '1' || colA.toLowerCase().includes('1')) {
+          if (colB) t1 = colB;
+          if (colC) v1 = colC;
+        } else if (colA === '2' || colA.toLowerCase().includes('2')) {
+          if (colB) t2 = colB;
+          if (colC) v2 = colC;
+        } else if (colA === '3' || colA.toLowerCase().includes('3')) {
+          if (colB) t3 = colB;
+          if (colC) v3 = colC;
+        } else if (r === 1) {
+          if (colB) t1 = colB;
+          if (colC) v1 = colC;
+        } else if (r === 2) {
+          if (colB) t2 = colB;
+          if (colC) v2 = colC;
+        } else if (r === 3) {
+          if (colB) t3 = colB;
+          if (colC) v3 = colC;
+        }
+      }
+
+      // Pattern 2: Single-row horizontal format fallback
+      if (!t1 && rows[1]) {
+        if (rows[1][0]) t1 = String(rows[1][0]).trim();
+        if (rows[1][1]) v1 = String(rows[1][1]).trim();
+        if (rows[1][2]) t2 = String(rows[1][2]).trim();
+        if (rows[1][3]) v2 = String(rows[1][3]).trim();
+        if (rows[1][4]) t3 = String(rows[1][4]).trim();
+        if (rows[1][5]) v3 = String(rows[1][5]).trim();
+      }
+
+      if (t1) document.getElementById('inputTopic1').value = t1;
+      if (v1) document.getElementById('inputVideo1').value = v1;
+      if (t2) document.getElementById('inputTopic2').value = t2;
+      if (v2) document.getElementById('inputVideo2').value = v2;
+      if (t3) document.getElementById('inputTopic3').value = t3;
+      if (v3) document.getElementById('inputVideo3').value = v3;
+
+      saveAndSyncLinks();
+      showToast('Đã đọc và nhập thành công dữ liệu đề thi theo form ảnh!', 'success');
+    }
+
+    function downloadExcelTemplate() {
+      const wsData = [
+        ['Số chủ đề', 'Tên chủ đề', 'Link video'],
+        [1, document.getElementById('inputTopic1').value || 'Chủ đề 1', document.getElementById('inputVideo1').value || 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=drive_link'],
+        [2, document.getElementById('inputTopic2').value || 'Chủ đề 2', document.getElementById('inputVideo2').value || 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=drive_link'],
+        [3, document.getElementById('inputTopic3').value || 'Chủ đề 3', document.getElementById('inputVideo3').value || 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=drive_link']
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+      XLSX.writeFile(wb, 'DTTT.xlsx');
+      showToast('Đã tải xuống file Excel mẫu DTTT.xlsx chuẩn!', 'success');
+    }
+
+    function copyToClipboard(text, label) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`Đã sao chép ${label || 'nội dung'}!`, 'info');
+      });
+    }
+
+    function copyRoomCode() {
+      copyToClipboard(currentRoomId, `Mã phòng ${currentRoomId}`);
+    }
+
+    function copyViewerLink() {
+      const fullUrl = `${window.location.origin}/viewer.html?roomid=${currentRoomId}`;
+      copyToClipboard(fullUrl, 'Link màn hình Viewer');
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toastNotification');
+      toast.className = 'toast-box show';
+      
+      if (type === 'success') {
+        toast.className = 'toast-box toast-success show';
+        toast.innerHTML = `<i class="fa-solid fa-circle-check" style="font-size: 18px;"></i><span style="font-size: 13px;">${message}</span>`;
+      } else if (type === 'error') {
+        toast.className = 'toast-box toast-error show';
+        toast.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="font-size: 18px;"></i><span style="font-size: 13px;">${message}</span>`;
+      } else {
+        toast.className = 'toast-box toast-info show';
+        toast.innerHTML = `<i class="fa-solid fa-circle-info" style="font-size: 18px; color: #fbbf24;"></i><span style="font-size: 13px;">${message}</span>`;
+      }
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3200);
+    }
+  </script>
+</body>
+</html>
