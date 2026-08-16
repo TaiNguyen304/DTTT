@@ -649,6 +649,7 @@
     const PLAYER_ROLE = 'player1';
     let socket = null;
     let currentRoomId = '123456';
+    let currentAuth = '';
     let timerCountdownInterval = null;
     let secondsLeft = 60;
     
@@ -659,7 +660,9 @@
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const roomParam = urlParams.get('roomid') || urlParams.get('room');
+      const authParam = urlParams.get('auth');
       if (roomParam) currentRoomId = roomParam;
+      if (authParam) currentAuth = authParam;
 
       document.getElementById('headerRoomId').innerText = currentRoomId;
 
@@ -689,7 +692,8 @@
 
         socket.emit('join-room', {
           roomId: currentRoomId,
-          role: PLAYER_ROLE
+          role: PLAYER_ROLE,
+          auth: currentAuth
         });
       });
 
@@ -741,26 +745,22 @@
     function updateLinks(links) {
       if (!links) return;
       
-      const v1 = document.getElementById('videoEl1');
-      const v2 = document.getElementById('videoEl2');
-      const v3 = document.getElementById('videoEl3');
-
       const src1 = window.formatVideoUrl ? window.formatVideoUrl(links.video1Url) : links.video1Url;
       const src2 = window.formatVideoUrl ? window.formatVideoUrl(links.video2Url) : links.video2Url;
       const src3 = window.formatVideoUrl ? window.formatVideoUrl(links.video3Url) : links.video3Url;
 
-      if (src1 && v1.src !== src1) {
-        v1.src = src1;
-        v1.load();
-      }
-      if (src2 && v2.src !== src2) {
-        v2.src = src2;
-        v2.load();
-      }
-      if (src3 && v3.src !== src3) {
-        v3.src = src3;
-        v3.load();
-      }
+      const setSrc = (elId, srcUrl) => {
+        const v = document.getElementById(elId);
+        if (!v || !srcUrl) return;
+        if (!v.src || !v.src.includes(srcUrl)) {
+          v.src = srcUrl;
+          v.load();
+        }
+      };
+
+      setSrc('videoEl1', src1);
+      setSrc('videoEl2', src2);
+      setSrc('videoEl3', src3);
 
       if (links.topic1) document.getElementById('topicBox1').dataset.topicName = links.topic1;
       if (links.topic2) document.getElementById('topicBox2').dataset.topicName = links.topic2;

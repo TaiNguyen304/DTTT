@@ -49,12 +49,31 @@ function formatVideoUrl(url) {
   if (!url) return '';
   url = String(url).trim();
   
-  // Extract Google Drive File ID
-  const driveMatch = url.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)|lh3\.googleusercontent\.com\/d\/)([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    const fileId = driveMatch[1];
-    return `/api/drive-video/${fileId}`;
+  // If already our API endpoint
+  if (url.startsWith('/api/drive-video/')) return url;
+
+  // Extract Google Drive File ID from all common Google Drive URL patterns
+  const drivePatterns = [
+    /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /drive\.usercontent\.google\.com\/download\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i,
+    /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i,
+    /docs\.google\.com\/(?:file\/d\/|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i
+  ];
+
+  for (const pattern of drivePatterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return `/api/drive-video/${match[1]}`;
+    }
   }
+
+  // If pure fileId (length between 25 and 50 characters)
+  if (/^[a-zA-Z0-9_-]{25,50}$/.test(url)) {
+    return `/api/drive-video/${url}`;
+  }
+
   return url;
 }
 
@@ -76,7 +95,13 @@ class SoundFXEngine {
     this.clipBedAudio = null;
   }
 
+  // Check if audio should be silenced (Controller is completely silent)
+  isMuted() {
+    return window.IS_CONTROLLER === true;
+  }
+
   init() {
+    if (this.isMuted()) return;
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
@@ -90,6 +115,7 @@ class SoundFXEngine {
 
   // 1. Play Theme Audio (The Master Of Minds - Category.mp3)
   playTheme() {
+    if (this.isMuted()) return;
     this.stopCategoryAndCountdown();
     this.init();
 
@@ -107,6 +133,7 @@ class SoundFXEngine {
 
   // 2. Play 5-Second Countdown Audio (The Master Of Minds - 5s CountDown.mp3)
   play5Seconds() {
+    if (this.isMuted()) return;
     this.stopCategoryAndCountdown();
     this.init();
 
@@ -124,6 +151,7 @@ class SoundFXEngine {
 
   // 3. Play 3-Second Countdown Audio (3s.mp3)
   play3Seconds() {
+    if (this.isMuted()) return;
     this.stopCategoryAndCountdown();
     this.init();
 
@@ -141,6 +169,7 @@ class SoundFXEngine {
 
   // 4. Play Clip Bed Audio when video plays (The Master Of Minds - Clip bed R2.mp3)
   playClipBed(currentTime = 0) {
+    if (this.isMuted()) return;
     this.init();
 
     const audioUrl = '/' + encodeURIComponent(AUDIO_FILES.CLIP_BED);
@@ -212,7 +241,7 @@ class SoundFXEngine {
 
   // Synthesizer Theme Fanfare fallback
   synthesizeThemeMusic() {
-    if (!this.ctx) return;
+    if (this.isMuted() || !this.ctx) return;
     const now = this.ctx.currentTime;
     
     const chords = [
@@ -249,7 +278,7 @@ class SoundFXEngine {
 
   // Synthesizer Countdown Beep fallback
   synthesizeCountdown(seconds) {
-    if (!this.ctx) return;
+    if (this.isMuted() || !this.ctx) return;
     const now = this.ctx.currentTime;
 
     for (let i = 0; i < seconds; i++) {

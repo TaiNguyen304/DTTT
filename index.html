@@ -409,7 +409,7 @@
           const passMap = { player1: '1111', player2: '2222', player3: '3333' };
           const fileMap = { player1: 'Player1.html', player2: 'Player2.html', player3: 'Player3.html' };
           if (passMap[player] === password) {
-            window.location.href = '/' + fileMap[player] + '?roomid=' + roomId;
+            window.location.href = '/' + fileMap[player] + '?roomid=' + roomId + '&auth=' + encodeURIComponent(password);
             return;
           }
         }

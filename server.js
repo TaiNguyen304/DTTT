@@ -1,5 +1,6 @@
 import express from 'express';
 import http from 'http';
+import https from 'https';
 import { Server as SocketIOServer } from 'socket.io';
 import path from 'path';
 import cors from 'cors';
@@ -108,14 +109,93 @@ demoRoom.passwords = {
   player3: '3333'
 };
 
+// Helper to proxy video streams with Range support and CORS headers
+function proxyVideoStream(targetUrl, req, res, fallbackContentType = 'video/mp4', redirectCount = 0) {
+  if (redirectCount > 5) {
+    return res.status(508).send('Too many redirects');
+  }
+
+  try {
+    const parsedUrl = new URL(targetUrl);
+    const clientModule = parsedUrl.protocol === 'http:' ? http : https;
+
+    const requestHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': '*/*'
+    };
+
+    if (req.headers.range) {
+      requestHeaders['Range'] = req.headers.range;
+    }
+
+    const upstreamReq = clientModule.get(targetUrl, { headers: requestHeaders }, (upstreamRes) => {
+      // Handle HTTP redirects (301, 302, 303, 307, 308)
+      if ([301, 302, 303, 307, 308].includes(upstreamRes.statusCode) && upstreamRes.headers.location) {
+        upstreamRes.resume();
+        const nextUrl = new URL(upstreamRes.headers.location, targetUrl).href;
+        return proxyVideoStream(nextUrl, req, res, fallbackContentType, redirectCount + 1);
+      }
+
+      const statusCode = upstreamRes.statusCode || 200;
+      let contentType = upstreamRes.headers['content-type'] || fallbackContentType;
+      if (contentType.includes('text/html') || contentType.includes('application/json')) {
+        contentType = fallbackContentType;
+      }
+
+      const responseHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': 'Range, Accept, Content-Type, Origin',
+        'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
+        'Accept-Ranges': 'bytes',
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400'
+      };
+
+      if (upstreamRes.headers['content-range']) {
+        responseHeaders['Content-Range'] = upstreamRes.headers['content-range'];
+      }
+      if (upstreamRes.headers['content-length']) {
+        responseHeaders['Content-Length'] = upstreamRes.headers['content-length'];
+      }
+
+      res.writeHead(statusCode, responseHeaders);
+      upstreamRes.pipe(res);
+
+      upstreamRes.on('error', (err) => {
+        console.error('Upstream response pipe error:', err.message);
+        if (!res.headersSent) res.status(500).send('Streaming error');
+      });
+    });
+
+    upstreamReq.on('error', (err) => {
+      console.error('Upstream request error:', err.message);
+      if (!res.headersSent) res.status(502).send('Video stream gateway error');
+    });
+
+    req.on('close', () => {
+      upstreamReq.destroy();
+    });
+  } catch (err) {
+    console.error('proxyVideoStream URL error:', err.message);
+    if (!res.headersSent) res.status(400).send('Invalid video URL');
+  }
+}
+
 // Google Drive Stream Proxy Route
 app.get('/api/drive-video/:fileId', (req, res) => {
   const fileId = req.params.fileId;
   if (!fileId) return res.status(400).send('File ID is required');
 
-  // Direct Google Drive download stream link
   const driveUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
-  res.redirect(driveUrl);
+  proxyVideoStream(driveUrl, req, res, 'video/mp4');
+});
+
+// General Video Proxy Route (for external direct video URLs that require CORS/Range forwarding)
+app.get('/api/proxy-video', (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl) return res.status(400).send('URL query parameter is required');
+  proxyVideoStream(String(targetUrl), req, res, 'video/mp4');
 });
 
 // REST API Endpoints
@@ -212,7 +292,7 @@ app.post('/api/login', (req, res) => {
     message: 'Đăng nhập thành công!',
     roomId: room.roomId,
     player: normalizedPlayer,
-    targetUrl: `/${targetFile}?roomid=${room.roomId}`
+    targetUrl: `/${targetFile}?roomid=${room.roomId}&auth=${encodeURIComponent(expectedPassword)}`
   });
 });
 

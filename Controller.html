@@ -603,16 +603,25 @@
               <span id="statusP1" style="font-size: 11px; color: #94a3b8; background: #08162b; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e3d6b;">Offline</span>
             </div>
             <div style="margin-top: 8px;">
-              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu Player 1:</span>
+              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu:</span>
               <div class="pass-box">
                 <span id="passP1" class="font-mono" style="color: #f87171; font-size: 16px;">1111</span>
-                <button onclick="copyToClipboard(document.getElementById('passP1').innerText, 'Mật khẩu Player 1')" style="background: none; border: none; color: #94a3b8;">
+                <button onclick="copyToClipboard(document.getElementById('passP1').innerText, 'Mật khẩu Player 1')" style="background: none; border: none; color: #94a3b8;" title="Sao chép mật khẩu">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 11px; color: #94a3b8;">Link Player 1:</span>
+              <div class="pass-box" style="font-size: 11px;">
+                <span id="p1LinkText" class="font-mono" style="color: #fca5a5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">/Player1.html?roomid=123456&auth=1111</span>
+                <button onclick="copyPlayerLink(1)" style="background: none; border: none; color: #94a3b8;" title="Sao chép link đầy đủ của Player 1">
                   <i class="fa-regular fa-copy"></i>
                 </button>
               </div>
             </div>
           </div>
-          <a id="linkP1" href="/Player1.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(159, 18, 57, 0.5); border: 1px solid #be123c; color: #fecdd3; padding: 7px 10px; font-size: 12px;">
+          <a id="linkP1" href="/Player1.html?roomid=123456&auth=1111" target="_blank" class="btn-link" style="background: rgba(159, 18, 57, 0.5); border: 1px solid #be123c; color: #fecdd3; padding: 7px 10px; font-size: 12px; margin-top: 10px;">
             Mở Giao Diện Player 1 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
           </a>
         </div>
@@ -627,16 +636,25 @@
               <span id="statusP2" style="font-size: 11px; color: #94a3b8; background: #08162b; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e3d6b;">Offline</span>
             </div>
             <div style="margin-top: 8px;">
-              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu Player 2:</span>
+              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu:</span>
               <div class="pass-box">
                 <span id="passP2" class="font-mono" style="color: #fbbf24; font-size: 16px;">2222</span>
-                <button onclick="copyToClipboard(document.getElementById('passP2').innerText, 'Mật khẩu Player 2')" style="background: none; border: none; color: #94a3b8;">
+                <button onclick="copyToClipboard(document.getElementById('passP2').innerText, 'Mật khẩu Player 2')" style="background: none; border: none; color: #94a3b8;" title="Sao chép mật khẩu">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 11px; color: #94a3b8;">Link Player 2:</span>
+              <div class="pass-box" style="font-size: 11px;">
+                <span id="p2LinkText" class="font-mono" style="color: #fde68a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">/Player2.html?roomid=123456&auth=2222</span>
+                <button onclick="copyPlayerLink(2)" style="background: none; border: none; color: #94a3b8;" title="Sao chép link đầy đủ của Player 2">
                   <i class="fa-regular fa-copy"></i>
                 </button>
               </div>
             </div>
           </div>
-          <a id="linkP2" href="/Player2.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(180, 83, 9, 0.5); border: 1px solid #d97706; color: #fef3c7; padding: 7px 10px; font-size: 12px;">
+          <a id="linkP2" href="/Player2.html?roomid=123456&auth=2222" target="_blank" class="btn-link" style="background: rgba(180, 83, 9, 0.5); border: 1px solid #d97706; color: #fef3c7; padding: 7px 10px; font-size: 12px; margin-top: 10px;">
             Mở Giao Diện Player 2 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
           </a>
         </div>
@@ -651,16 +669,25 @@
               <span id="statusP3" style="font-size: 11px; color: #94a3b8; background: #08162b; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e3d6b;">Offline</span>
             </div>
             <div style="margin-top: 8px;">
-              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu Player 3:</span>
+              <span style="font-size: 11px; color: #94a3b8;">Mật khẩu:</span>
               <div class="pass-box">
                 <span id="passP3" class="font-mono" style="color: #60a5fa; font-size: 16px;">3333</span>
-                <button onclick="copyToClipboard(document.getElementById('passP3').innerText, 'Mật khẩu Player 3')" style="background: none; border: none; color: #94a3b8;">
+                <button onclick="copyToClipboard(document.getElementById('passP3').innerText, 'Mật khẩu Player 3')" style="background: none; border: none; color: #94a3b8;" title="Sao chép mật khẩu">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 11px; color: #94a3b8;">Link Player 3:</span>
+              <div class="pass-box" style="font-size: 11px;">
+                <span id="p3LinkText" class="font-mono" style="color: #bfdbfe; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">/Player3.html?roomid=123456&auth=3333</span>
+                <button onclick="copyPlayerLink(3)" style="background: none; border: none; color: #94a3b8;" title="Sao chép link đầy đủ của Player 3">
                   <i class="fa-regular fa-copy"></i>
                 </button>
               </div>
             </div>
           </div>
-          <a id="linkP3" href="/Player3.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(29, 78, 216, 0.5); border: 1px solid #2563eb; color: #bfdbfe; padding: 7px 10px; font-size: 12px;">
+          <a id="linkP3" href="/Player3.html?roomid=123456&auth=3333" target="_blank" class="btn-link" style="background: rgba(29, 78, 216, 0.5); border: 1px solid #2563eb; color: #bfdbfe; padding: 7px 10px; font-size: 12px; margin-top: 10px;">
             Mở Giao Diện Player 3 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
           </a>
         </div>
@@ -1041,6 +1068,9 @@
 
   <script src="/shared-sync.js"></script>
   <script>
+    // Controller is strictly silent - only Player & Viewer play audio
+    window.IS_CONTROLLER = true;
+
     // State management
     let socket = null;
     let currentRoomId = '123456';
@@ -1122,6 +1152,7 @@
         document.getElementById('passP1').innerText = state.passwords.player1 || '1111';
         document.getElementById('passP2').innerText = state.passwords.player2 || '2222';
         document.getElementById('passP3').innerText = state.passwords.player3 || '3333';
+        updateRoomDisplay();
       }
 
       if (state.topic1) document.getElementById('inputTopic1').value = state.topic1;
@@ -1197,12 +1228,28 @@
     }
 
     function updateRoomDisplay() {
+      const p1Pass = document.getElementById('passP1')?.innerText.trim() || '1111';
+      const p2Pass = document.getElementById('passP2')?.innerText.trim() || '2222';
+      const p3Pass = document.getElementById('passP3')?.innerText.trim() || '3333';
+
       document.getElementById('currentRoomDisplay').innerText = currentRoomId;
-      document.getElementById('linkP1').href = `/Player1.html?roomid=${currentRoomId}`;
-      document.getElementById('linkP2').href = `/Player2.html?roomid=${currentRoomId}`;
-      document.getElementById('linkP3').href = `/Player3.html?roomid=${currentRoomId}`;
-      document.getElementById('linkViewer').href = `/Viewer.html?roomid=${currentRoomId}`;
-      document.getElementById('viewerLinkText').innerText = `/Viewer.html?roomid=${currentRoomId}`;
+
+      const linkP1 = `/Player1.html?roomid=${currentRoomId}&auth=${encodeURIComponent(p1Pass)}`;
+      const linkP2 = `/Player2.html?roomid=${currentRoomId}&auth=${encodeURIComponent(p2Pass)}`;
+      const linkP3 = `/Player3.html?roomid=${currentRoomId}&auth=${encodeURIComponent(p3Pass)}`;
+      const linkViewer = `/Viewer.html?roomid=${currentRoomId}`;
+
+      document.getElementById('linkP1').href = linkP1;
+      document.getElementById('p1LinkText').innerText = linkP1;
+
+      document.getElementById('linkP2').href = linkP2;
+      document.getElementById('p2LinkText').innerText = linkP2;
+
+      document.getElementById('linkP3').href = linkP3;
+      document.getElementById('p3LinkText').innerText = linkP3;
+
+      document.getElementById('linkViewer').href = linkViewer;
+      document.getElementById('viewerLinkText').innerText = linkViewer;
     }
 
     async function createNewRoom() {
@@ -1231,10 +1278,10 @@
         const data = await res.json();
         if (data.success) {
           currentRoomId = data.roomId;
-          updateRoomDisplay();
           document.getElementById('passP1').innerText = data.passwords.player1;
           document.getElementById('passP2').innerText = data.passwords.player2;
           document.getElementById('passP3').innerText = data.passwords.player3;
+          updateRoomDisplay();
 
           // Rejoin socket room
           socket.emit('join-room', { roomId: currentRoomId, role: 'controller' });
@@ -1332,29 +1379,25 @@
       showToast(`${newState ? 'Đã hiện' : 'Đã ẩn'} Chủ đề ${index} trên tất cả Player & Viewer!`, 'info');
     }
 
-    // AUDIO ACTIONS (Fixed files)
+    // AUDIO ACTIONS (Triggered by Host -> Broadcasted to Player & Viewer only)
     function triggerPlayThemeAudio() {
-      window.soundEngine.playTheme();
       socket.emit('controller:play-theme-audio');
-      showToast('Đang phát Nhạc Chủ Đề (The Master Of Minds - Category.mp3)!', 'info');
+      showToast('Đang phát Nhạc Chủ Đề trên các máy Player & Viewer!', 'info');
     }
 
     function triggerPlay5sAudio() {
-      window.soundEngine.play5Seconds();
       socket.emit('controller:play-5s-audio');
-      showToast('Đang phát Nhạc 5 Giây (The Master Of Minds - 5s CountDown.mp3)!', 'info');
+      showToast('Đang phát Nhạc 5 Giây trên các máy Player & Viewer!', 'info');
     }
 
     function triggerPlay3sAudio() {
-      window.soundEngine.play3Seconds();
       socket.emit('controller:play-3s-audio');
-      showToast('Đang phát Nhạc 3 Giây (3s.mp3)!', 'info');
+      showToast('Đang phát Nhạc 3 Giây trên các máy Player & Viewer!', 'info');
     }
 
     function triggerStopAudio() {
-      window.soundEngine.stopAll();
       socket.emit('controller:stop-audio');
-      showToast('Đã dừng toàn bộ âm thanh!', 'info');
+      showToast('Đã dừng toàn bộ âm thanh trên Player & Viewer!', 'info');
     }
 
     // VIDEO & 60s TIMER SYNCHRONOUS PLAYBACK
@@ -1365,21 +1408,18 @@
       const v2 = document.getElementById('previewVideoEl2');
       const v3 = document.getElementById('previewVideoEl3');
       
-      if (v1) v1.play().catch(()=>{});
-      if (v2) v2.play().catch(()=>{});
-      if (v3) v3.play().catch(()=>{});
+      if (v1) { v1.muted = true; v1.play().catch(()=>{}); }
+      if (v2) { v2.muted = true; v2.play().catch(()=>{}); }
+      if (v3) { v3.muted = true; v3.play().catch(()=>{}); }
 
       isVideoPlaying = true;
 
-      // 1. Play Clip Bed Music at matching currentTime
-      window.soundEngine.playClipBed(time);
-
-      // 2. Start 60s Countdown Timer
+      // Start 60s Countdown Timer
       startTimer60s();
 
-      // 3. Emit play to all connected players & viewers
+      // Emit play to all connected players & viewers (they will play video & Clip bed audio)
       socket.emit('controller:play-videos', { currentTime: time });
-      showToast('Đang phát 3 Video, nhạc Clip bed R2 và đếm ngược 60s!', 'success');
+      showToast('Đang phát 3 Video & Đếm ngược 60s trên tất cả Player & Viewer!', 'success');
     }
 
     function triggerPauseVideos() {
@@ -1392,15 +1432,12 @@
 
       isVideoPlaying = false;
 
-      // 1. Pause Clip Bed Music at this exact moment
-      window.soundEngine.pauseClipBed();
-
-      // 2. Pause 60s Countdown Timer
+      // Pause 60s Countdown Timer
       pauseTimer60s();
 
-      // 3. Emit pause to all connected players & viewers
+      // Emit pause to all connected players & viewers
       socket.emit('controller:pause-videos', { currentTime: time });
-      showToast('Đã tạm dừng Video, Nhạc và Đồng hồ đếm ngược!', 'info');
+      showToast('Đã tạm dừng Video và Đồng hồ đếm ngược!', 'info');
     }
 
     function triggerResetVideos() {
@@ -1414,13 +1451,10 @@
 
       isVideoPlaying = false;
 
-      // 1. Reset Clip Bed Music
-      window.soundEngine.stopClipBed();
-
-      // 2. Reset 60s Countdown Timer
+      // Reset 60s Countdown Timer
       resetTimer60s();
 
-      // 3. Emit reset to all connected players & viewers
+      // Emit reset to all connected players & viewers
       socket.emit('controller:seek-videos', { currentTime: 0 });
       showToast('Đã đặt lại Video về 00:00 và Đồng hồ về 60s!', 'info');
     }
@@ -1438,22 +1472,19 @@
 
       if (data.action === 'play') {
         isVideoPlaying = true;
-        if (v1) v1.play().catch(()=>{});
-        if (v2) v2.play().catch(()=>{});
-        if (v3) v3.play().catch(()=>{});
-        window.soundEngine.playClipBed(data.currentTime || 0);
+        if (v1) { v1.muted = true; v1.play().catch(()=>{}); }
+        if (v2) { v2.muted = true; v2.play().catch(()=>{}); }
+        if (v3) { v3.muted = true; v3.play().catch(()=>{}); }
       } else if (data.action === 'pause') {
         isVideoPlaying = false;
         if (v1) v1.pause();
         if (v2) v2.pause();
         if (v3) v3.pause();
-        window.soundEngine.pauseClipBed();
       } else if (data.action === 'seek') {
         isVideoPlaying = false;
         if (v1) { v1.currentTime = data.currentTime || 0; v1.pause(); }
         if (v2) { v2.currentTime = data.currentTime || 0; v2.pause(); }
         if (v3) { v3.currentTime = data.currentTime || 0; v3.pause(); }
-        window.soundEngine.stopClipBed();
       }
     }
 
@@ -1479,14 +1510,12 @@
         secondsLeft--;
         document.getElementById('controllerTimerDisplay').innerText = `${Math.max(0, secondsLeft)}s`;
         
-        // When 60s runs out: stop music and stop video
+        // When 60s runs out: stop video automatically
         if (secondsLeft <= 0) {
           clearInterval(timerInterval);
           document.getElementById('timerStatusText').innerText = '(Hết giờ 60s!)';
-          window.soundEngine.stopClipBed();
-          window.soundEngine.synthesizeCountdown(1);
           triggerPauseVideos();
-          showToast('Đã hết 60 giây! Tự động dừng nhạc và video.', 'info');
+          showToast('Đã hết 60 giây! Tự động dừng video.', 'info');
         }
       }, 1000);
     }
@@ -1518,7 +1547,6 @@
           if (secondsLeft <= 0) {
             clearInterval(timerInterval);
             document.getElementById('timerStatusText').innerText = '(Hết giờ 60s!)';
-            window.soundEngine.stopClipBed();
           }
         }, 1000);
       } else if (data.action === 'pause') {
@@ -1535,31 +1563,23 @@
     }
 
     function loadPreviewVideos(u1, u2, u3) {
-      const formatted1 = window.formatVideoUrl(u1);
-      const formatted2 = window.formatVideoUrl(u2);
-      const formatted3 = window.formatVideoUrl(u3);
+      const formatted1 = window.formatVideoUrl ? window.formatVideoUrl(u1) : u1;
+      const formatted2 = window.formatVideoUrl ? window.formatVideoUrl(u2) : u2;
+      const formatted3 = window.formatVideoUrl ? window.formatVideoUrl(u3) : u3;
 
-      if (formatted1) {
-        const v1 = document.getElementById('previewVideoEl1');
-        if (v1 && v1.src !== formatted1) {
-          v1.src = formatted1;
-          v1.load();
+      const setSrc = (elId, srcUrl) => {
+        const v = document.getElementById(elId);
+        if (!v || !srcUrl) return;
+        v.muted = true;
+        if (!v.src || !v.src.includes(srcUrl)) {
+          v.src = srcUrl;
+          v.load();
         }
-      }
-      if (formatted2) {
-        const v2 = document.getElementById('previewVideoEl2');
-        if (v2 && v2.src !== formatted2) {
-          v2.src = formatted2;
-          v2.load();
-        }
-      }
-      if (formatted3) {
-        const v3 = document.getElementById('previewVideoEl3');
-        if (v3 && v3.src !== formatted3) {
-          v3.src = formatted3;
-          v3.load();
-        }
-      }
+      };
+
+      setSrc('previewVideoEl1', formatted1);
+      setSrc('previewVideoEl2', formatted2);
+      setSrc('previewVideoEl3', formatted3);
     }
 
     function saveAndSyncLinks() {
@@ -1706,6 +1726,12 @@
     function copyViewerLink() {
       const fullUrl = `${window.location.origin}/Viewer.html?roomid=${currentRoomId}`;
       copyToClipboard(fullUrl, 'Link màn hình Viewer');
+    }
+
+    function copyPlayerLink(num) {
+      const pass = document.getElementById(`passP${num}`)?.innerText.trim() || '';
+      const fullUrl = `${window.location.origin}/Player${num}.html?roomid=${currentRoomId}&auth=${encodeURIComponent(pass)}`;
+      copyToClipboard(fullUrl, `Link Player ${num}`);
     }
 
     function showToast(message, type = 'info') {
