@@ -31,14 +31,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Default demo topics and video links
+// Default demo topics and video links (Streamable support)
 const DEFAULT_DEMO = {
   topic1: 'Chủ đề 1',
-  video1Url: 'https://drive.google.com/file/d/1ptLK4YNaz0bS7L-AfXQVo4GIH1JvEHkd/view?usp=sharing',
+  video1Url: 'https://streamable.com/ifjh',
   topic2: 'Chủ đề 2',
-  video2Url: 'https://drive.google.com/file/d/1ZAijZ5ePiNtGDdNH2cKjB2DKCFvHSzqE/view?usp=sharing',
+  video2Url: 'https://streamable.com/ifjh',
   topic3: 'Chủ đề 3',
-  video3Url: 'https://drive.google.com/file/d/1j8sJh424Q6P5z5NG4eUYfeaC6-VwH1JW/view?usp=sharing',
+  video3Url: 'https://streamable.com/ifjh',
   themeAudioUrl: 'The Master Of Minds - Category.mp3',
   audio5sUrl: 'The Master Of Minds - 5s CountDown.mp3',
   audio3sUrl: '3s.mp3',
@@ -120,11 +120,28 @@ demoRoom.passwords = {
 };
 
 // -------------------------------------------------------------
-// VIDEO STREAMING & UNIVERSAL H.264 TRANSCODING ENGINE
+// VIDEO STREAMING & UNIVERSAL TRANSCODING ENGINE (STREAMABLE & GOOGLE DRIVE)
 // Ensures video displays clear visuals across all browsers
 // -------------------------------------------------------------
 
 const activeTranscodes = new Map();
+
+function extractStreamableId(url) {
+  if (!url) return null;
+  url = String(url).trim().replace(/^['"`]|['"`]$/g, '');
+  if (url.startsWith('/api/streamable-video/')) {
+    return url.replace('/api/streamable-video/', '').split('?')[0].split('/')[0].trim();
+  }
+
+  const match = url.match(/(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:(?:e|o|m)\/)?([a-zA-Z0-9]+)/i);
+  if (match && match[1]) return match[1];
+
+  if (/^[a-zA-Z0-9]{4,12}$/.test(url)) {
+    return url;
+  }
+
+  return null;
+}
 
 function extractDriveFileId(url) {
   if (!url) return null;
@@ -203,6 +220,104 @@ function streamLocalFile(filePath, req, res) {
     console.error('streamLocalFile error:', err);
     if (!res.headersSent) res.status(500).send('Error streaming file');
   }
+}
+
+// Streamable video processor with local high-speed caching & faststart
+async function ensureStreamableVideo(streamableId) {
+  if (!streamableId) throw new Error('Missing streamableId');
+  const targetFilePath = path.join(VIDEO_CACHE_DIR, `streamable_${streamableId}.mp4`);
+  if (fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).size > 5000) {
+    return targetFilePath;
+  }
+
+  const cacheKey = `streamable_${streamableId}`;
+  if (activeTranscodes.has(cacheKey)) {
+    return activeTranscodes.get(cacheKey);
+  }
+
+  const promise = (async () => {
+    console.log(`[StreamableEngine] Fetching metadata for ${streamableId}...`);
+    const apiUrl = `https://api.streamable.com/videos/${streamableId}`;
+    let mp4DirectUrl = null;
+
+    try {
+      const resp = await fetch(apiUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+      });
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json.files) {
+          if (json.files.mp4 && json.files.mp4.url) mp4DirectUrl = json.files.mp4.url;
+          else if (json.files['mp4-high'] && json.files['mp4-high'].url) mp4DirectUrl = json.files['mp4-high'].url;
+          else if (json.files['mp4-mobile'] && json.files['mp4-mobile'].url) mp4DirectUrl = json.files['mp4-mobile'].url;
+          else {
+            for (const k of Object.keys(json.files)) {
+              if (json.files[k] && json.files[k].url && (json.files[k].url.includes('.mp4') || k.includes('mp4'))) {
+                mp4DirectUrl = json.files[k].url;
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[StreamableEngine] Error fetching api for ${streamableId}:`, e.message);
+    }
+
+    if (!mp4DirectUrl) {
+      mp4DirectUrl = `https://cdn-cf-west.streamable.com/video/mp4/${streamableId}.mp4`;
+    }
+    if (mp4DirectUrl.startsWith('//')) {
+      mp4DirectUrl = 'https:' + mp4DirectUrl;
+    }
+
+    console.log(`[StreamableEngine] Downloading direct MP4 for ${streamableId}...`);
+    const rawFilePath = path.join(VIDEO_CACHE_DIR, `temp_streamable_${streamableId}_raw.mp4`);
+
+    await new Promise((resolve, reject) => {
+      const curl = spawn('curl', ['-s', '-L', '-A', 'Mozilla/5.0', mp4DirectUrl, '-o', rawFilePath]);
+      curl.on('close', (code) => {
+        if (code === 0 && fs.existsSync(rawFilePath) && fs.statSync(rawFilePath).size > 1000) {
+          resolve();
+        } else {
+          reject(new Error(`Failed to download Streamable video ${streamableId}`));
+        }
+      });
+      curl.on('error', reject);
+    });
+
+    // Run ffmpeg faststart + AAC stereo ensuring immediate frame render and clean audio
+    console.log(`[StreamableEngine] Optimizing streamable_${streamableId} with faststart & AAC audio...`);
+    await new Promise((resolve) => {
+      const ff = spawn('ffmpeg', [
+        '-y',
+        '-i', rawFilePath,
+        '-c:v', 'copy',
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-ar', '44100',
+        '-movflags', '+faststart',
+        targetFilePath
+      ]);
+      ff.on('close', () => {
+        try { fs.unlinkSync(rawFilePath); } catch (e) {}
+        resolve();
+      });
+      ff.on('error', () => {
+        try { fs.renameSync(rawFilePath, targetFilePath); } catch (e) {}
+        resolve();
+      });
+    });
+
+    console.log(`[StreamableEngine] Successfully cached Streamable video: ${targetFilePath} (${fs.statSync(targetFilePath).size} bytes)`);
+    io.emit('video-ready', { fileId: streamableId, url: `/api/streamable-video/${streamableId}` });
+    return targetFilePath;
+  })().finally(() => {
+    activeTranscodes.delete(cacheKey);
+  });
+
+  activeTranscodes.set(cacheKey, promise);
+  return promise;
 }
 
 async function ensureH264Video(fileId) {
@@ -310,9 +425,16 @@ async function ensureH264Video(fileId) {
   return promise;
 }
 
-// Background prewarm helper
+// Background prewarm helper for Streamable and Google Drive
 function prewarmVideos(urls = []) {
   for (const url of urls) {
+    const streamableId = extractStreamableId(url);
+    if (streamableId) {
+      ensureStreamableVideo(streamableId).catch(err => {
+        console.warn(`[StreamableEngine] Pre-warm failed for ${streamableId}:`, err.message);
+      });
+      continue;
+    }
     const fileId = extractDriveFileId(url);
     if (fileId) {
       ensureH264Video(fileId).catch(err => {
@@ -324,6 +446,29 @@ function prewarmVideos(urls = []) {
 
 // Start prewarming initial demo videos immediately
 prewarmVideos([DEFAULT_DEMO.video1Url, DEFAULT_DEMO.video2Url, DEFAULT_DEMO.video3Url]);
+
+// Streamable Video Stream Route
+app.get('/api/streamable-video/:streamableId', async (req, res) => {
+  const streamableId = req.params.streamableId;
+  if (!streamableId) return res.status(400).send('Streamable ID is required');
+
+  try {
+    const targetFilePath = await ensureStreamableVideo(streamableId);
+    streamLocalFile(targetFilePath, req, res);
+  } catch (err) {
+    console.error('Streamable video stream error:', err);
+    try {
+      const apiUrl = `https://api.streamable.com/videos/${streamableId}`;
+      const resp = await fetch(apiUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const json = await resp.json();
+      const mp4 = json?.files?.mp4?.url || json?.files?.['mp4-mobile']?.url;
+      if (mp4) {
+        return res.redirect(mp4.startsWith('//') ? 'https:' + mp4 : mp4);
+      }
+    } catch (e) {}
+    res.status(500).send('Unable to stream video from Streamable');
+  }
+});
 
 // Google Drive Stream Proxy Route (with guaranteed H.264 support)
 app.get('/api/drive-video/:fileId', async (req, res) => {
@@ -344,14 +489,19 @@ app.get('/api/drive-video/:fileId', async (req, res) => {
 // Video preparation status API
 app.get('/api/video-status/:fileId', (req, res) => {
   const fileId = req.params.fileId;
-  const targetFilePath = path.join(VIDEO_CACHE_DIR, `${fileId}.mp4`);
-  const isReady = fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).size > 10000;
-  const isProcessing = activeTranscodes.has(fileId);
+  const streamablePath = path.join(VIDEO_CACHE_DIR, `streamable_${fileId}.mp4`);
+  const drivePath = path.join(VIDEO_CACHE_DIR, `${fileId}.mp4`);
+  
+  const isStreamableReady = fs.existsSync(streamablePath) && fs.statSync(streamablePath).size > 5000;
+  const isDriveReady = fs.existsSync(drivePath) && fs.statSync(drivePath).size > 10000;
+  const isReady = isStreamableReady || isDriveReady;
+  const isProcessing = activeTranscodes.has(fileId) || activeTranscodes.has(`streamable_${fileId}`);
+  
   res.json({
     fileId,
     ready: isReady,
     processing: isProcessing,
-    size: isReady ? fs.statSync(targetFilePath).size : 0
+    size: isStreamableReady ? fs.statSync(streamablePath).size : (isDriveReady ? fs.statSync(drivePath).size : 0)
   });
 });
 

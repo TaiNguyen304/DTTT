@@ -38,16 +38,22 @@
   }, { capture: true });
 })();
 
-// Helper to convert Google Drive link to streaming direct URL (which streams web-standard H.264)
+// Helper to convert Streamable / Google Drive / MP4 links to streaming direct URL
 function formatVideoUrl(url) {
   if (!url) return '';
   url = String(url).trim().replace(/^['"`]|['"`]$/g, '');
   
-  if (url.startsWith('/api/drive-video/')) {
+  if (url.startsWith('/api/streamable-video/') || url.startsWith('/api/drive-video/')) {
     return url;
   }
 
-  // Handle all Google Drive link variations including /file/d/{id}/view?usp=sharing
+  // 1. Handle Streamable links: https://streamable.com/{id}, streamable.com/e/{id}, streamable.com/{id}
+  const streamableMatch = url.match(/(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:(?:e|o|m)\/)?([a-zA-Z0-9]+)/i);
+  if (streamableMatch && streamableMatch[1]) {
+    return `/api/streamable-video/${streamableMatch[1]}`;
+  }
+
+  // 2. Handle Google Drive link variations including /file/d/{id}/view?usp=sharing
   const drivePatterns = [
     /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
     /drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([a-zA-Z0-9_-]+)/i,
@@ -64,7 +70,7 @@ function formatVideoUrl(url) {
     }
   }
 
-  // Direct Drive File ID
+  // Direct Drive File ID (25-60 chars)
   if (/^[a-zA-Z0-9_-]{25,60}$/.test(url)) {
     return `/api/drive-video/${url}`;
   }
