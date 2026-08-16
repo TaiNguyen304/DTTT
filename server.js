@@ -192,13 +192,13 @@ app.post('/api/login', (req, res) => {
 
   if (normalizedPlayer === 'player1' || normalizedPlayer === '1') {
     expectedPassword = room.passwords.player1;
-    targetFile = 'player1.html';
+    targetFile = 'Player1.html';
   } else if (normalizedPlayer === 'player2' || normalizedPlayer === '2') {
     expectedPassword = room.passwords.player2;
-    targetFile = 'player2.html';
+    targetFile = 'Player2.html';
   } else if (normalizedPlayer === 'player3' || normalizedPlayer === '3') {
     expectedPassword = room.passwords.player3;
-    targetFile = 'player3.html';
+    targetFile = 'Player3.html';
   } else {
     return res.status(400).json({ success: false, message: 'Người chơi không hợp lệ (chọn Player 1, Player 2 hoặc Player 3)!' });
   }
@@ -216,41 +216,30 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// Serve direct HTML files
-app.get('/', (req, res) => {
+// Serve direct HTML files (supporting both uppercase and lowercase aliases)
+app.get(['/', '/index.html', '/Index.html', '/index', '/Index'], (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+app.get(['/Controller.html', '/controller.html', '/Controller', '/controller'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Controller.html'));
 });
 
-app.get('/controller.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'controller.html'));
+app.get(['/Player1.html', '/player1.html', '/Player1', '/player1'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Player1.html'));
 });
 
-app.get('/player1.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'player1.html'));
+app.get(['/Player2.html', '/player2.html', '/Player2', '/player2'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Player2.html'));
 });
 
-app.get('/player2.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'player2.html'));
+app.get(['/Player3.html', '/player3.html', '/Player3', '/player3'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Player3.html'));
 });
 
-app.get('/player3.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'player3.html'));
+app.get(['/Viewer.html', '/viewer.html', '/Viewer', '/viewer'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Viewer.html'));
 });
-
-app.get('/viewer.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'viewer.html'));
-});
-
-// Clean URLs fallback
-app.get('/controller', (req, res) => res.sendFile(path.join(__dirname, 'controller.html')));
-app.get('/player1', (req, res) => res.sendFile(path.join(__dirname, 'player1.html')));
-app.get('/player2', (req, res) => res.sendFile(path.join(__dirname, 'player2.html')));
-app.get('/player3', (req, res) => res.sendFile(path.join(__dirname, 'player3.html')));
-app.get('/viewer', (req, res) => res.sendFile(path.join(__dirname, 'viewer.html')));
 
 // Serve static assets from root directory
 app.use(express.static(__dirname));

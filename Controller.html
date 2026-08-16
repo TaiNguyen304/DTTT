@@ -612,7 +612,7 @@
               </div>
             </div>
           </div>
-          <a id="linkP1" href="/player1.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(159, 18, 57, 0.5); border: 1px solid #be123c; color: #fecdd3; padding: 7px 10px; font-size: 12px;">
+          <a id="linkP1" href="/Player1.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(159, 18, 57, 0.5); border: 1px solid #be123c; color: #fecdd3; padding: 7px 10px; font-size: 12px;">
             Mở Giao Diện Player 1 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
           </a>
         </div>
@@ -636,7 +636,7 @@
               </div>
             </div>
           </div>
-          <a id="linkP2" href="/player2.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(180, 83, 9, 0.5); border: 1px solid #d97706; color: #fef3c7; padding: 7px 10px; font-size: 12px;">
+          <a id="linkP2" href="/Player2.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(180, 83, 9, 0.5); border: 1px solid #d97706; color: #fef3c7; padding: 7px 10px; font-size: 12px;">
             Mở Giao Diện Player 2 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
           </a>
         </div>
@@ -660,7 +660,7 @@
               </div>
             </div>
           </div>
-          <a id="linkP3" href="/player3.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(29, 78, 216, 0.5); border: 1px solid #2563eb; color: #bfdbfe; padding: 7px 10px; font-size: 12px;">
+          <a id="linkP3" href="/Player3.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(29, 78, 216, 0.5); border: 1px solid #2563eb; color: #bfdbfe; padding: 7px 10px; font-size: 12px;">
             Mở Giao Diện Player 3 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
           </a>
         </div>
@@ -677,14 +677,14 @@
             <div style="margin-top: 8px;">
               <span style="font-size: 11px; color: #94a3b8;">Link chia sẻ khán giả:</span>
               <div class="pass-box" style="font-size: 12px;">
-                <span id="viewerLinkText" class="font-mono" style="color: #d8b4fe; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">/viewer.html?roomid=123456</span>
+                <span id="viewerLinkText" class="font-mono" style="color: #d8b4fe; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">/Viewer.html?roomid=123456</span>
                 <button onclick="copyViewerLink()" style="background: none; border: none; color: #94a3b8;">
                   <i class="fa-regular fa-copy"></i>
                 </button>
               </div>
             </div>
           </div>
-          <a id="linkViewer" href="/viewer.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(109, 40, 217, 0.5); border: 1px solid #7c3aed; color: #ede9fe; padding: 7px 10px; font-size: 12px;">
+          <a id="linkViewer" href="/Viewer.html?roomid=123456" target="_blank" class="btn-link" style="background: rgba(109, 40, 217, 0.5); border: 1px solid #7c3aed; color: #ede9fe; padding: 7px 10px; font-size: 12px;">
             Mở Màn Hình Viewer <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
           </a>
         </div>
@@ -1198,11 +1198,11 @@
 
     function updateRoomDisplay() {
       document.getElementById('currentRoomDisplay').innerText = currentRoomId;
-      document.getElementById('linkP1').href = `/player1.html?roomid=${currentRoomId}`;
-      document.getElementById('linkP2').href = `/player2.html?roomid=${currentRoomId}`;
-      document.getElementById('linkP3').href = `/player3.html?roomid=${currentRoomId}`;
-      document.getElementById('linkViewer').href = `/viewer.html?roomid=${currentRoomId}`;
-      document.getElementById('viewerLinkText').innerText = `/viewer.html?roomid=${currentRoomId}`;
+      document.getElementById('linkP1').href = `/Player1.html?roomid=${currentRoomId}`;
+      document.getElementById('linkP2').href = `/Player2.html?roomid=${currentRoomId}`;
+      document.getElementById('linkP3').href = `/Player3.html?roomid=${currentRoomId}`;
+      document.getElementById('linkViewer').href = `/Viewer.html?roomid=${currentRoomId}`;
+      document.getElementById('viewerLinkText').innerText = `/Viewer.html?roomid=${currentRoomId}`;
     }
 
     async function createNewRoom() {
@@ -1704,7 +1704,7 @@
     }
 
     function copyViewerLink() {
-      const fullUrl = `${window.location.origin}/viewer.html?roomid=${currentRoomId}`;
+      const fullUrl = `${window.location.origin}/Viewer.html?roomid=${currentRoomId}`;
       copyToClipboard(fullUrl, 'Link màn hình Viewer');
     }
 
