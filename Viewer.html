@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viewer Screen - Màn Hình Trình Chiếu Khán Giả</title>
+  <title>Viewer Screen - Đấu Trường Thông Thái</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="/socket.io/socket.io.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -284,6 +284,9 @@
       background: #000000;
       border: 2.5px solid #1e3d6b;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint layout;
     }
 
     .viewer-video-frame.border-red { border-color: #dc2626; }
@@ -297,6 +300,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     .video-label-badge {

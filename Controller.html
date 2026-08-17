@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Game Show Controller - Quản Trò & Điều Khiển</title>
+  <title>Controller - Đấu Trường Thông Thái</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
@@ -1483,107 +1483,17 @@
       showToast('Đã đặt lại Video về 00:00 và Đồng hồ về 60s!', 'info');
     }
 
-    function handleVideoAction(data) {
-      const v1 = document.getElementById('previewVideoEl1');
-      const v2 = document.getElementById('previewVideoEl2');
-      const v3 = document.getElementById('previewVideoEl3');
-
-      if (typeof data.currentTime === 'number') {
-        if (v1 && Math.abs(v1.currentTime - data.currentTime) > 0.3) v1.currentTime = data.currentTime;
-        if (v2 && Math.abs(v2.currentTime - data.currentTime) > 0.3) v2.currentTime = data.currentTime;
-        if (v3 && Math.abs(v3.currentTime - data.currentTime) > 0.3) v3.currentTime = data.currentTime;
-      }
-
-      if (data.action === 'play') {
-        isVideoPlaying = true;
-        if (v1) { v1.muted = true; v1.play().catch(()=>{}); }
-        if (v2) { v2.muted = true; v2.play().catch(()=>{}); }
-        if (v3) { v3.muted = true; v3.play().catch(()=>{}); }
-      } else if (data.action === 'pause') {
-        isVideoPlaying = false;
-        if (v1) v1.pause();
-        if (v2) v2.pause();
-        if (v3) v3.pause();
-      } else if (data.action === 'seek') {
-        isVideoPlaying = false;
-        if (v1) { v1.currentTime = data.currentTime || 0; v1.pause(); }
-        if (v2) { v2.currentTime = data.currentTime || 0; v2.pause(); }
-        if (v3) { v3.currentTime = data.currentTime || 0; v3.pause(); }
-      }
-    }
-
-    // Video Monitor Timer
-    setInterval(() => {
-      const v1 = document.getElementById('previewVideoEl1');
-      if (v1 && !isNaN(v1.currentTime)) {
-        const cur = Math.floor(v1.currentTime);
-        const mins = String(Math.floor(cur / 60)).padStart(2, '0');
-        const secs = String(cur % 60).padStart(2, '0');
-        document.getElementById('previewVideoTime').innerText = `${mins}:${secs}`;
-      }
-    }, 500);
-
-    // TIMER 60s ENGINE
+    // TIMER 60s ACTIONS
     function startTimer60s() {
-      if (timerInterval) clearInterval(timerInterval);
-      document.getElementById('timerStatusText').innerText = '(Đang đếm ngược)';
-      
-      socket.emit('controller:timer-action', { action: 'start', seconds: secondsLeft });
-
-      timerInterval = setInterval(() => {
-        secondsLeft--;
-        document.getElementById('controllerTimerDisplay').innerText = `${Math.max(0, secondsLeft)}s`;
-        
-        // When 60s runs out: stop video automatically
-        if (secondsLeft <= 0) {
-          clearInterval(timerInterval);
-          document.getElementById('timerStatusText').innerText = '(Hết giờ 60s!)';
-          triggerPauseVideos();
-          showToast('Đã hết 60 giây! Tự động dừng video.', 'info');
-        }
-      }, 1000);
+      triggerPlayVideos();
     }
 
     function pauseTimer60s() {
-      if (timerInterval) clearInterval(timerInterval);
-      document.getElementById('timerStatusText').innerText = '(Tạm dừng)';
-      socket.emit('controller:timer-action', { action: 'pause', seconds: secondsLeft });
+      triggerPauseVideos();
     }
 
     function resetTimer60s() {
-      if (timerInterval) clearInterval(timerInterval);
-      secondsLeft = 60;
-      document.getElementById('controllerTimerDisplay').innerText = `60s`;
-      document.getElementById('timerStatusText').innerText = '(Đã đặt lại 60s)';
-      socket.emit('controller:timer-action', { action: 'reset' });
-    }
-
-    function handleTimerAction(data) {
-      if (data.action === 'start' || data.isRunning) {
-        if (timerInterval) clearInterval(timerInterval);
-        secondsLeft = typeof data.secondsRemaining === 'number' ? data.secondsRemaining : 60;
-        document.getElementById('controllerTimerDisplay').innerText = `${secondsLeft}s`;
-        document.getElementById('timerStatusText').innerText = '(Đang đếm ngược)';
-        
-        timerInterval = setInterval(() => {
-          secondsLeft--;
-          document.getElementById('controllerTimerDisplay').innerText = `${Math.max(0, secondsLeft)}s`;
-          if (secondsLeft <= 0) {
-            clearInterval(timerInterval);
-            document.getElementById('timerStatusText').innerText = '(Hết giờ 60s!)';
-          }
-        }, 1000);
-      } else if (data.action === 'pause') {
-        if (timerInterval) clearInterval(timerInterval);
-        if (typeof data.secondsRemaining === 'number') secondsLeft = data.secondsRemaining;
-        document.getElementById('controllerTimerDisplay').innerText = `${secondsLeft}s`;
-        document.getElementById('timerStatusText').innerText = '(Tạm dừng)';
-      } else if (data.action === 'reset') {
-        if (timerInterval) clearInterval(timerInterval);
-        secondsLeft = 60;
-        document.getElementById('controllerTimerDisplay').innerText = `60s`;
-        document.getElementById('timerStatusText').innerText = '(Đã đặt lại 60s)';
-      }
+      triggerResetVideos();
     }
 
     function loadPreviewVideos(u1, u2, u3) {

@@ -82,53 +82,63 @@ function formatVideoUrl(url) {
 function attachVideoSafely(videoEl, rawUrl) {
   if (!videoEl || !rawUrl) return;
   const targetUrl = formatVideoUrl(rawUrl);
-  
+
   // Clear any existing <source> child tags to prevent browser source resolution conflicts
   while (videoEl.firstChild) {
     videoEl.removeChild(videoEl.firstChild);
   }
 
   videoEl.playsInline = true;
+  videoEl.webkitPlaysInline = true;
   videoEl.preload = 'auto';
+  videoEl.disablePictureInPicture = true;
+  videoEl.controls = false;
 
-  // Nudge first frame when metadata is loaded so it never appears as a blank/black frame
-  const onLoaded = () => {
-    if (videoEl.paused && videoEl.currentTime < 0.05) {
-      try {
-        videoEl.currentTime = 0.05;
-      } catch (e) {}
-    }
-  };
-  videoEl.addEventListener('loadeddata', onLoaded, { once: true });
-  videoEl.addEventListener('loadedmetadata', onLoaded, { once: true });
+  // GPU compositing hint
+  videoEl.style.transform = 'translateZ(0)';
+  videoEl.style.backfaceVisibility = 'hidden';
 
-  if (videoEl.src !== targetUrl && !videoEl.src.endsWith(targetUrl)) {
+  const normalizedTarget = new URL(targetUrl, window.location.origin).href;
+  const currentSrc = videoEl.currentSrc ? new URL(videoEl.currentSrc, window.location.origin).href : '';
+
+  if (currentSrc !== normalizedTarget && videoEl.src !== targetUrl && !videoEl.src.endsWith(targetUrl)) {
     videoEl.src = targetUrl;
     try {
       videoEl.load();
     } catch (e) {}
   }
 
-  // Automatic retry on network or decode glitch while server is preparing H.264
-  if (!videoEl._retryHandlerAttached) {
-    videoEl._retryHandlerAttached = true;
+  // Automatic retry & stall recovery without infinite freeze loops
+  if (!videoEl._syncHandlersAttached) {
+    videoEl._syncHandlersAttached = true;
     let retryCount = 0;
+
     videoEl.addEventListener('error', (e) => {
       if (retryCount < 5 && videoEl.src) {
         retryCount++;
-        const currentSrc = videoEl.src;
+        const savedSrc = videoEl.src;
         setTimeout(() => {
-          if (videoEl.src === currentSrc) {
+          if (videoEl.src === savedSrc) {
             console.log(`[VideoPlayer] Retrying video reload (${retryCount}/5)...`);
-            videoEl.load();
+            try { videoEl.load(); } catch (err) {}
           }
-        }, 1500 * retryCount);
+        }, 1200 * retryCount);
       }
+    });
+
+    videoEl.addEventListener('stalled', () => {
+      if (videoEl.paused && window.syncClock && window.syncClock.isPlaying) {
+        try { videoEl.play().catch(() => {}); } catch (e) {}
+      }
+    });
+
+    videoEl.addEventListener('waiting', () => {
+      // Browser buffering, allow smooth decode catchup
     });
 
     videoEl.addEventListener('canplay', () => {
       retryCount = 0;
-      if (videoEl.paused && videoEl.currentTime < 0.05) {
+      if (videoEl.paused && videoEl.currentTime < 0.05 && (!window.syncClock || !window.syncClock.isPlaying)) {
         try { videoEl.currentTime = 0.05; } catch (e) {}
       }
     });
@@ -345,8 +355,8 @@ class SoundFXEngine {
 }
 
 // -------------------------------------------------------------
-// HIGH-PRECISION UNIVERSAL CLOCK & TAB-SWITCH DRIFT PROTECTOR
-// Guarantees exact timestamp sync across all tabs and devices
+// HIGH-PRECISION UNIVERSAL CLOCK & UNTHROTTLED BACKGROUND ENGINE
+// Guarantees continuous video & timer playback across tab switches and shape overlays
 // -------------------------------------------------------------
 
 class UniversalSyncClock {
@@ -366,17 +376,70 @@ class UniversalSyncClock {
     this.currentRemaining = 60;
     this.rafId = null;
 
+    // Per-element last seek timestamps to avoid decoder thrashing
+    this.lastSeekMap = new WeakMap();
+
     this.loop = this.loop.bind(this);
     this.handleVisibility = this.handleVisibility.bind(this);
+    this.tick = this.tick.bind(this);
+
+    // 1. Setup unthrottled Web Worker Ticker for background tab execution
+    this.initBackgroundWorker();
 
     document.addEventListener('visibilitychange', this.handleVisibility);
     window.addEventListener('focus', this.handleVisibility);
     window.addEventListener('pageshow', this.handleVisibility);
 
-    // Periodic safety sync interval (100ms)
+    // 2. Window fallback interval (100ms)
     setInterval(() => {
-      this.tick();
+      if (this.isPlaying || this.isTimerRunning) {
+        this.tick();
+      }
     }, 100);
+  }
+
+  initBackgroundWorker() {
+    this.worker = null;
+    try {
+      const workerCode = `
+        let timer = null;
+        self.onmessage = function(e) {
+          if (e.data === 'start') {
+            if (!timer) {
+              timer = setInterval(function() {
+                self.postMessage('tick');
+              }, 50);
+            }
+          } else if (e.data === 'stop') {
+            if (timer) {
+              clearInterval(timer);
+              timer = null;
+            }
+          }
+        };
+      `;
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      this.worker = new Worker(URL.createObjectURL(blob));
+      this.worker.onmessage = (e) => {
+        if (e.data === 'tick' && (this.isPlaying || this.isTimerRunning)) {
+          this.tick();
+        }
+      };
+    } catch (e) {
+      console.warn('[SyncClock] Web Worker ticker disabled, falling back to interval timers:', e);
+    }
+  }
+
+  startWorker() {
+    if (this.worker) {
+      try { this.worker.postMessage('start'); } catch (e) {}
+    }
+  }
+
+  stopWorker() {
+    if (this.worker) {
+      try { this.worker.postMessage('stop'); } catch (e) {}
+    }
   }
 
   setServerTime(serverTime) {
@@ -398,7 +461,10 @@ class UniversalSyncClock {
     this.startRemaining = typeof data.secondsRemaining === 'number' ? data.secondsRemaining : (typeof data.startRemaining === 'number' ? data.startRemaining : this.currentRemaining);
     if (this.startRemaining <= 0) this.startRemaining = 60;
 
+    this.startWorker();
     this.tick();
+    this.syncAttachedVideos(true);
+
     if (!this.rafId) this.rafId = requestAnimationFrame(this.loop);
   }
 
@@ -411,10 +477,13 @@ class UniversalSyncClock {
     this.startPosition = this.currentVideoTime;
     this.startRemaining = this.currentRemaining;
 
+    this.stopWorker();
     this.tick();
+    this.syncAttachedVideos(true);
   }
 
   reset(data = {}) {
+    if (data.serverTime) this.setServerTime(data.serverTime);
     this.isPlaying = false;
     this.isTimerRunning = false;
     this.currentVideoTime = 0;
@@ -423,11 +492,14 @@ class UniversalSyncClock {
     this.startRemaining = 60;
     this.startedAt = 0;
 
+    this.stopWorker();
     this.tick();
+    this.syncAttachedVideos(true);
   }
 
   sync(data = {}) {
     if (data.serverTime) this.setServerTime(data.serverTime);
+    const wasPlaying = this.isPlaying;
     this.isPlaying = !!data.isPlaying;
     this.isTimerRunning = !!(data.isTimerRunning || data.isRunning);
 
@@ -435,15 +507,20 @@ class UniversalSyncClock {
       this.startedAt = data.startedAt || this.startedAt || this.getAdjustedNow();
       if (typeof data.startPosition === 'number') this.startPosition = data.startPosition;
       if (typeof data.startRemaining === 'number') this.startRemaining = data.startRemaining;
+      this.startWorker();
     } else {
       if (typeof data.currentSeconds === 'number') this.currentVideoTime = data.currentSeconds;
       if (typeof data.currentTime === 'number') this.currentVideoTime = data.currentTime;
       if (typeof data.secondsRemaining === 'number') this.currentRemaining = data.secondsRemaining;
       this.startPosition = this.currentVideoTime;
       this.startRemaining = this.currentRemaining;
+      this.stopWorker();
     }
 
     this.tick();
+    if (this.isPlaying && !wasPlaying) {
+      this.syncAttachedVideos(true);
+    }
     if ((this.isPlaying || this.isTimerRunning) && !this.rafId) {
       this.rafId = requestAnimationFrame(this.loop);
     }
@@ -461,11 +538,12 @@ class UniversalSyncClock {
         this.isTimerRunning = false;
         this.currentRemaining = 0;
         this.currentVideoTime = 60;
+        this.stopWorker();
         if (this.onFinish) this.onFinish();
       }
     }
 
-    // Sync all attached video elements
+    // Continuously sync all attached video elements
     this.syncAttachedVideos();
 
     // Trigger UI Callback
@@ -480,8 +558,14 @@ class UniversalSyncClock {
   }
 
   loop() {
+    if (!this.isPlaying && !this.isTimerRunning) {
+      this.rafId = null;
+      return;
+    }
+
     this.tick();
-    if (this.isPlaying || this.isTimerRunning) {
+
+    if (!document.hidden && (this.isPlaying || this.isTimerRunning)) {
       this.rafId = requestAnimationFrame(this.loop);
     } else {
       this.rafId = null;
@@ -489,60 +573,80 @@ class UniversalSyncClock {
   }
 
   handleVisibility() {
-    // When tab becomes active or switches focus, immediately snap video and timers
+    // When tab becomes active or switches focus, immediately force video and clock alignment
     this.tick();
-    this.syncAttachedVideos(true);
+    if (this.isPlaying || this.isTimerRunning) {
+      this.syncAttachedVideos(true);
+      if (!this.rafId) {
+        this.rafId = requestAnimationFrame(this.loop);
+      }
+    }
   }
 
   syncAttachedVideos(forceSeek = false) {
     const target = this.currentVideoTime;
     const playing = this.isPlaying;
+    const now = Date.now();
 
     this.videoElements.forEach(v => {
-      if (!v) return;
+      if (!v || !v.src) return;
 
       if (this.isMutedVideo) {
         v.muted = true;
       }
 
-      // Calculate time difference between video's current frame and target time
+      if (!playing) {
+        // Paused state: ensure video is paused and gently set frame
+        if (!v.paused) {
+          try { v.pause(); } catch (e) {}
+        }
+        if (forceSeek || Math.abs(v.currentTime - target) > 0.08) {
+          try { v.currentTime = target; } catch (e) {}
+        }
+        if (v.playbackRate !== 1.0) {
+          v.playbackRate = 1.0;
+        }
+        return;
+      }
+
+      // Playing state:
+      // 1. Ensure video is actively playing continuously
+      if (v.paused) {
+        const playPromise = v.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('[SyncClock] Unmuted playback blocked, falling back to muted continuous play:', err.message);
+            v.muted = true;
+            v.play().catch(() => {});
+          });
+        }
+      }
+
+      // 2. Skip time adjustment if hardware seek is already in progress
+      if (v.seeking) return;
+
       const diff = v.currentTime - target;
       const absDiff = Math.abs(diff);
+      const lastSeek = this.lastSeekMap.get(v) || 0;
 
-      if (forceSeek || absDiff > 0.25) {
-        // Hard seek if drift is noticeable or forceSeek is requested
+      if (forceSeek || (absDiff > 1.25 && now - lastSeek > 1200)) {
+        // Hard seek if drift is significant (e.g. initial start or return from long background tab)
+        this.lastSeekMap.set(v, now);
         try {
           v.currentTime = target;
           v.playbackRate = 1.0;
         } catch (e) {}
-      } else if (playing && absDiff > 0.04) {
-        // Micro-nudge playback rate (broadcast precision sync within 1 frame)
+      } else if (absDiff > 0.15) {
+        // Smooth adaptive dynamic rate to eliminate frame drops
         if (diff > 0) {
-          v.playbackRate = 0.95;
+          v.playbackRate = 0.93; // slightly slower
         } else {
-          v.playbackRate = 1.05;
+          v.playbackRate = 1.07; // slightly faster
         }
       } else {
+        // In tight sync zone (<150ms): steady 1.0x standard rate
         if (v.playbackRate !== 1.0) {
           v.playbackRate = 1.0;
-        }
-      }
-
-      if (playing) {
-        if (v.paused) {
-          const playPromise = v.play();
-          if (playPromise !== undefined) {
-            playPromise.catch((err) => {
-              // If unmuted playback is blocked by browser autoplay policy, fallback to muted play so visual displays immediately
-              console.warn('[SyncClock] Unmuted play blocked by browser, falling back to muted autoplay:', err.message);
-              v.muted = true;
-              v.play().catch(() => {});
-            });
-          }
-        }
-      } else {
-        if (!v.paused) {
-          try { v.pause(); } catch (e) {}
         }
       }
     });

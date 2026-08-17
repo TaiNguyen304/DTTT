@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Player 3 - Game Show Arena</title>
+  <title>Player 3 - Đấu Trường Thông Thái</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="/socket.io/socket.io.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -283,6 +283,9 @@
       background: #000000;
       border: 2.5px solid #1e3d6b;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint layout;
     }
 
     .video-frame-box.border-red { border-color: #dc2626; }
@@ -296,6 +299,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     /* Shape Overlays */
@@ -309,19 +314,22 @@
       padding: 16px;
       cursor: pointer;
       user-select: none;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 0.35s ease, transform 0.35s ease;
       z-index: 10;
+      will-change: opacity, transform;
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     .shape-overlay.shape-closed {
       opacity: 1;
-      transform: scale(1);
+      transform: scale(1) translateZ(0);
       pointer-events: auto;
     }
 
     .shape-overlay.shape-opened {
       opacity: 0;
-      transform: scale(0.96);
+      transform: scale(0.96) translateZ(0);
       pointer-events: none;
     }
 
@@ -894,6 +902,7 @@
     }
 
     function handleShapeClick(frameIndex) {
+      window.soundEngine.init();
       if (openedFrame === frameIndex) {
         openedFrame = null;
       } else {
@@ -907,20 +916,38 @@
         const shape = document.getElementById(`shape${i}`);
         const closeBtn = document.getElementById(`closeBtn${i}`);
         const vid = document.getElementById(`videoEl${i}`);
+
         if (openedFrame === i) {
-          shape.classList.remove('shape-closed');
-          shape.classList.add('shape-opened');
-          closeBtn.classList.remove('hidden');
+          // Open Shape: reveal visually and unmute audio
+          if (shape) {
+            shape.classList.remove('shape-closed');
+            shape.classList.add('shape-opened');
+          }
+          if (closeBtn) closeBtn.classList.remove('hidden');
+
           if (vid) {
             vid.muted = false;
             vid.volume = 1.0;
+            if (syncClock && syncClock.isPlaying && vid.paused) {
+              vid.play().catch(() => {
+                vid.muted = true;
+                vid.play().catch(() => {});
+              });
+            }
           }
         } else {
-          shape.classList.remove('shape-opened');
-          shape.classList.add('shape-closed');
-          closeBtn.classList.add('hidden');
+          // Close Shape: hide visually under shape and mute audio (Video MUST KEEP PLAYING)
+          if (shape) {
+            shape.classList.remove('shape-opened');
+            shape.classList.add('shape-closed');
+          }
+          if (closeBtn) closeBtn.classList.add('hidden');
+
           if (vid) {
             vid.muted = true;
+            if (syncClock && syncClock.isPlaying && vid.paused) {
+              vid.play().catch(() => {});
+            }
           }
         }
       }
